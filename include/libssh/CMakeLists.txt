@@ -5,6 +5,7 @@ set(libssh_HDRS
   libssh.h
   ssh2.h
   legacy.h
+  counters.h
 )
 
 if (WITH_SFTP)
