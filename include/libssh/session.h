@@ -27,6 +27,7 @@
 #include "libssh/auth.h"
 #include "libssh/channels.h"
 #include "libssh/poll.h"
+#include "libssh/counters.h"
 
 /* These are the different states a SSH session can be into its life */
 enum ssh_session_state_e {
@@ -188,6 +189,11 @@ struct ssh_session_struct {
         char *gss_client_identity;
         int gss_delegate_creds;
     } opts;
+
+    /* counters */
+    ssh_bytes_counter socket_byte_counter;
+    ssh_bytes_counter raw_byte_counter;
+    ssh_packet_counter packet_counter;
 };
 
 /** @internal
