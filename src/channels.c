@@ -555,6 +555,8 @@ SSH_PACKET_CALLBACK(channel_rcv_data){
                                                 is_stderr,
                                                 channel->callbacks->userdata);
       if(rest > 0) {
+        if (channel->bytes_counter)
+            channel->bytes_counter->in_bytes += rest;
         buffer_pass_bytes(buf, rest);
       }
       if (channel->local_window + buffer_get_rest_len(buf) < WINDOWLIMIT) {
@@ -1384,6 +1386,8 @@ int channel_write_common(ssh_channel channel, const void *data,
     channel->remote_window -= effectivelen;
     len -= effectivelen;
     data = ((uint8_t*)data + effectivelen);
+    if (channel->bytes_counter)
+      channel->bytes_counter->out_bytes += effectivelen;
   }
   /* it's a good idea to flush the socket now */
   rc = ssh_channel_flush(channel);
@@ -2816,6 +2820,8 @@ int ssh_channel_read_timeout(ssh_channel channel,
   len = (len > count ? count : len);
   memcpy(dest, buffer_get_rest(stdbuf), len);
   buffer_pass_bytes(stdbuf,len);
+  if (channel->bytes_counter)
+    channel->bytes_counter->in_bytes += len;
   /* Authorize some buffering while userapp is busy */
   if (channel->local_window < WINDOWLIMIT) {
     if (grow_window(session, channel, 0) < 0) {
