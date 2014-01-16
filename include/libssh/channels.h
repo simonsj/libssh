@@ -21,6 +21,7 @@
 #ifndef CHANNELS_H_
 #define CHANNELS_H_
 #include "libssh/priv.h"
+#include "libssh/counters.h"
 
 /**  @internal
  * Describes the different possible states in a
@@ -75,6 +76,8 @@ struct ssh_channel_struct {
     int exit_status;
     enum ssh_channel_request_state_e request_state;
     ssh_channel_callbacks callbacks;
+    /* counters */
+    ssh_bytes_counter bytes_counter;
 };
 
 SSH_PACKET_CALLBACK(ssh_packet_channel_open_conf);
