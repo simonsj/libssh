@@ -708,6 +708,8 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
     ssh_string pubkey_blob = NULL;
     uint8_t has_sign;
 
+    msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_ERROR;
+
     msg->auth_request.method = SSH_AUTH_METHOD_PUBLICKEY;
     SAFE_FREE(method);
     rc = ssh_buffer_unpack(packet, "bSS",
@@ -726,7 +728,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
     ssh_string_free(pubkey_blob);
     pubkey_blob = NULL;
     if (rc < 0) {
-        goto error;
+        goto end;
     }
     msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_NONE;
     // has a valid signature ?
@@ -738,7 +740,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
         if(sig_blob == NULL) {
             SSH_LOG(SSH_LOG_PACKET, "Invalid signature packet from peer");
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_ERROR;
-            goto error;
+            goto end;
         }
 
         digest = ssh_msg_userauth_build_digest(session, msg, service);
@@ -746,7 +748,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
             ssh_string_free(sig_blob);
             SSH_LOG(SSH_LOG_PACKET, "Failed to get digest");
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
-            goto error;
+            goto end;
         }
 
         rc = ssh_pki_signature_verify_blob(session,
@@ -757,11 +759,9 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
         ssh_string_free(sig_blob);
         ssh_buffer_free(digest);
         if (rc < 0) {
-            SSH_LOG(
-                    SSH_LOG_PACKET,
-                    "Received an invalid  signature from peer");
+            SSH_LOG(SSH_LOG_PACKET, "Received invalid signature from peer");
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
-            goto error;
+            goto end;
         }
 
         SSH_LOG(SSH_LOG_PACKET, "Valid signature received");
