@@ -812,18 +812,21 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
     uint8_t has_sign;
     int rc;
 
+    msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_ERROR;
+
     msg->auth_request.method = SSH_AUTH_METHOD_PUBLICKEY;
     SAFE_FREE(method);
+
     buffer_get_u8(packet, &has_sign);
     algo = buffer_get_ssh_string(packet);
     if (algo == NULL) {
-      goto error;
+      goto end;
     }
     pubkey_blob = buffer_get_ssh_string(packet);
     if (pubkey_blob == NULL) {
       ssh_string_free(algo);
       algo = NULL;
-      goto error;
+      goto end;
     }
     ssh_string_free(algo);
     algo = NULL;
@@ -832,7 +835,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
     ssh_string_free(pubkey_blob);
     pubkey_blob = NULL;
     if (rc < 0) {
-        goto error;
+        goto end;
     }
     msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_NONE;
     // has a valid signature ?
@@ -844,7 +847,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
         if(sig_blob == NULL) {
             SSH_LOG(SSH_LOG_PACKET, "Invalid signature packet from peer");
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_ERROR;
-            goto error;
+            goto end;
         }
 
         digest = ssh_msg_userauth_build_digest(session, msg, service);
@@ -852,7 +855,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
             ssh_string_free(sig_blob);
             SSH_LOG(SSH_LOG_PACKET, "Failed to get digest");
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
-            goto error;
+            goto end;
         }
 
         rc = ssh_pki_signature_verify_blob(session,
@@ -863,11 +866,9 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
         ssh_string_free(sig_blob);
         ssh_buffer_free(digest);
         if (rc < 0) {
-            SSH_LOG(
-                    SSH_LOG_PACKET,
-                    "Received an invalid  signature from peer");
+            SSH_LOG(SSH_LOG_PACKET, "Received invalid signature from peer");
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
-            goto error;
+            goto end;
         }
 
         SSH_LOG(SSH_LOG_PACKET, "Valid signature received");
