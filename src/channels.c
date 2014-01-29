@@ -1274,8 +1274,24 @@ int ssh_channel_flush(ssh_channel channel){
   return ssh_blocking_flush(channel->session, SSH_TIMEOUT_DEFAULT);
 }
 
+/**
+ * @internal
+ * @brief Write to the given channel's stdout or stderr, specifying
+ *        a timeout in millseconds or any of the SSH_TIMEOUT* values.
+ *
+ * @param[in]  channel     The channel to write to.
+ * @param[in]  data        A pointer to the data to write.
+ * @param[in]  len         The length of the source buffer.
+ * @param[in]  is_stderr   Whether to write to stderr or stdout.
+ * @param[in]  timeout_ms  Timeout in millseconds, or any of the
+ *                         SSH_TIMEOUT* values.
+ *
+ * @return The number of bytes written, 0 upon timeout, SSH_ERROR on error.
+ *
+ * @see ssh_channel_read()
+ */
 int channel_write_common(ssh_channel channel, const void *data,
-    uint32_t len, int is_stderr) {
+    uint32_t len, int is_stderr, int timeout_ms) {
   ssh_session session;
   uint32_t origlen = len;
   size_t effectivelen;
@@ -1328,7 +1344,7 @@ int channel_write_common(ssh_channel channel, const void *data,
   }
 #endif
   if (ssh_waitsession_unblocked(session) == 0){
-    rc = ssh_handle_packets_termination(session, SSH_TIMEOUT_DEFAULT,
+    rc = ssh_handle_packets_termination(session, timeout_ms,
             ssh_waitsession_unblocked, session);
     if (rc == SSH_ERROR || !ssh_waitsession_unblocked(session))
         goto out;
@@ -1344,7 +1360,7 @@ int channel_write_common(ssh_channel channel, const void *data,
           /* nothing can be written */
           SSH_LOG(SSH_LOG_PROTOCOL,
                 "Wait for a growing window message...");
-          rc = ssh_handle_packets_termination(session, SSH_TIMEOUT_DEFAULT,
+          rc = ssh_handle_packets_termination(session, timeout_ms,
               ssh_channel_waitwindow_termination,channel);
           if (rc == SSH_ERROR ||
               !ssh_channel_waitwindow_termination(channel) ||
@@ -1409,20 +1425,35 @@ uint32_t ssh_channel_window_size(ssh_channel channel) {
 }
 
 /**
- * @brief Blocking write on a channel.
+ * @brief Write to the given channel's stdout.
  *
  * @param[in]  channel  The channel to write to.
- *
  * @param[in]  data     A pointer to the data to write.
+ * @param[in]  len      The length of the source buffer.
  *
- * @param[in]  len      The length of the buffer to write to.
- *
- * @return              The number of bytes written, SSH_ERROR on error.
+ * @return The number of bytes written, SSH_ERROR on error.
  *
  * @see ssh_channel_read()
  */
 int ssh_channel_write(ssh_channel channel, const void *data, uint32_t len) {
-  return channel_write_common(channel, data, len, 0);
+  return channel_write_common(channel, data, len, 0, SSH_TIMEOUT_DEFAULT);
+}
+
+/**
+ * @brief Write to the given channel's stdout with timeout.
+ *
+ * @param[in]  channel     The channel to write to.
+ * @param[in]  data        A pointer to the data to write.
+ * @param[in]  len         The length of the source buffer.
+ * @param[in]  timeout_ms  Timeout in millseconds.
+ *
+ * @return The number of bytes written, 0 upon timeout, SSH_ERROR on error.
+ *
+ * @see ssh_channel_read()
+ */
+int ssh_channel_write_timeout(ssh_channel channel, const void *data,
+                              uint32_t len, int timeout_ms) {
+  return channel_write_common(channel, data, len, 0, timeout_ms);
 }
 
 /**
@@ -3278,20 +3309,36 @@ void ssh_channel_set_counter(ssh_channel channel,
 
 #if WITH_SERVER
 /**
- * @brief Blocking write on a channel stderr.
+ * @brief Write to the given channel's stderr.
  *
  * @param[in]  channel  The channel to write to.
- *
  * @param[in]  data     A pointer to the data to write.
+ * @param[in]  len      The length of the source buffer.
  *
- * @param[in]  len      The length of the buffer to write to.
- *
- * @return              The number of bytes written, SSH_ERROR on error.
+ * @return The number of bytes written, SSH_ERROR on error.
  *
  * @see ssh_channel_read()
  */
-int ssh_channel_write_stderr(ssh_channel channel, const void *data, uint32_t len) {
-  return channel_write_common(channel, data, len, 1);
+int ssh_channel_write_stderr(ssh_channel channel, const void *data,
+                             uint32_t len) {
+  return channel_write_common(channel, data, len, 1, SSH_TIMEOUT_DEFAULT);
+}
+
+/**
+ * @brief Write to the given channel's stderr with timeout.
+ *
+ * @param[in]  channel     The channel to write to.
+ * @param[in]  data        A pointer to the data to write.
+ * @param[in]  len         The length of the source buffer.
+ * @param[in]  timeout_ms  Timeout in millseconds.
+ *
+ * @return The number of bytes written, 0 upon timeout, SSH_ERROR on error.
+ *
+ * @see ssh_channel_read()
+ */
+int ssh_channel_write_stderr_timeout(ssh_channel channel, const void *data,
+                                     uint32_t len, int timeout_ms) {
+  return channel_write_common(channel, data, len, 1, timeout_ms);
 }
 
 /**
