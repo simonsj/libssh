@@ -334,6 +334,13 @@ LIBSSH_API int ssh_channel_request_send_exit_signal(ssh_channel channel,
                                                 int core,
                                                 const char *errmsg,
                                                 const char *lang);
+LIBSSH_API int ssh_channel_write_stderr(ssh_channel channel,
+                                        const void *data,
+                                        uint32_t len);
+LIBSSH_API int ssh_channel_write_stderr_timeout(ssh_channel channel,
+                                                const void *data,
+                                                uint32_t len,
+                                                int timeout_ms);
 
 LIBSSH_API int ssh_send_keepalive(ssh_session session);
 

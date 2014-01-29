@@ -427,6 +427,7 @@ LIBSSH_API int ssh_channel_write(ssh_channel channel, const void *data, uint32_t
 LIBSSH_API int ssh_channel_write_stderr(ssh_channel channel,
                                         const void *data,
                                         uint32_t len);
+LIBSSH_API int ssh_channel_write_timeout(ssh_channel channel, const void *data, uint32_t len, int timeout_ms);
 LIBSSH_API uint32_t ssh_channel_window_size(ssh_channel channel);
 
 LIBSSH_API char *ssh_basename (const char *path);
