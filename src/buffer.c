@@ -39,6 +39,11 @@
  */
 #define BUFFER_INIT_SIZE (1024 * 33)
 
+/*
+ * Header size used when sending the session out buffer (see packet_send2).
+ */
+#define PACKET_SEND_HEADER_SIZE (5)
+
 /**
  * @defgroup libssh_buffer The SSH buffer functions.
  * @ingroup libssh
@@ -102,6 +107,19 @@ struct ssh_buffer_struct *ssh_buffer_new(void) {
     return buf;
   }
   buf->allocated = BUFFER_INIT_SIZE;
+
+#ifdef PACKET_SEND_HEADER_SIZE
+  /*
+   * A bit of a hack here: reserve the first five bytes in case this
+   * is the session out buffer -- in that case, packet_send2 can
+   * avoid doing a realloc + memmove + memcpy for every packet
+   * sent, and instead memcpy only the header bytes necessary.
+   *
+   * Other buffers shouldn't miss these 5 bytes.
+   */
+  buf->pos = PACKET_SEND_HEADER_SIZE;
+  buf->used = PACKET_SEND_HEADER_SIZE;
+#endif /* PACKET_SEND_HEADER_SIZE */
 #endif /* BUFFER_INIT_SIZE */
 
   return buf;
@@ -186,6 +204,16 @@ int buffer_reinit(struct ssh_buffer_struct *buffer) {
       return -1;
     }
   }
+#else /* BUFFER_INIT_SIZE */
+#ifdef PACKET_SEND_HEADER_SIZE
+  /*
+   * See comment in ssh_buffer_new.
+   */
+  if (buffer->allocated > PACKET_SEND_HEADER_SIZE) {
+    buffer->used = PACKET_SEND_HEADER_SIZE;
+    buffer->pos = PACKET_SEND_HEADER_SIZE;
+  }
+#endif /* PACKET_SEND_HEADER_SIZE */
 #endif /* BUFFER_INIT_SIZE */
 
   buffer_verify(buffer);
