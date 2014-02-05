@@ -507,6 +507,8 @@ static int packet_send2(ssh_session session) {
   uint32_t finallen,payloadsize,compsize;
   uint8_t padding;
 
+  uint8_t header[sizeof(padding) + sizeof(finallen)] = { 0 };
+
   payloadsize = currentlen;
 #ifdef WITH_ZLIB
   if (session->current_crypto
@@ -530,10 +532,9 @@ static int packet_send2(ssh_session session) {
 
   finallen = htonl(currentlen + padding + 1);
 
-  if (buffer_prepend_data(session->out_buffer, &padding, sizeof(uint8_t)) < 0) {
-    goto error;
-  }
-  if (buffer_prepend_data(session->out_buffer, &finallen, sizeof(uint32_t)) < 0) {
+  memcpy(&header[0], &finallen, sizeof(finallen));
+  header[sizeof(finallen)] = padding;
+  if (buffer_prepend_data(session->out_buffer, &header, sizeof(header)) < 0) {
     goto error;
   }
   if (buffer_add_data(session->out_buffer, padstring, padding) < 0) {
