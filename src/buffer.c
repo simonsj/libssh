@@ -179,11 +179,15 @@ int buffer_reinit(struct ssh_buffer_struct *buffer) {
   memset(buffer->data, 0, buffer->used);
   buffer->used = 0;
   buffer->pos = 0;
+
+#ifndef BUFFER_INIT_SIZE
   if(buffer->allocated > 127) {
     if (realloc_buffer(buffer, 127) < 0) {
       return -1;
     }
   }
+#endif /* BUFFER_INIT_SIZE */
+
   buffer_verify(buffer);
   return 0;
 }
