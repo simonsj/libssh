@@ -508,7 +508,7 @@ static int packet_send2(ssh_session session) {
       session->current_crypto->out_cipher->blocksize : 8);
   uint32_t currentlen = buffer_get_rest_len(session->out_buffer);
   unsigned char *hmac = NULL;
-  char padstring[32] = {0};
+  char padstring[32] = { 0 };
   int rc = SSH_ERROR;
   uint32_t finallen,payloadsize,compsize;
   uint8_t padding;
@@ -532,8 +532,6 @@ static int packet_send2(ssh_session session) {
 
   if (session->current_crypto) {
     ssh_get_random(padstring, padding, 0);
-  } else {
-    memset(padstring,0,padding);
   }
 
   finallen = htonl(currentlen + padding + 1);
