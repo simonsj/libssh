@@ -633,6 +633,8 @@ typedef int (*ssh_event_callback)(socket_t fd, int revents, void *userdata);
 LIBSSH_API ssh_event ssh_event_new(void);
 LIBSSH_API int ssh_event_add_fd(ssh_event event, socket_t fd, short events,
                                     ssh_event_callback cb, void *userdata);
+LIBSSH_API int ssh_event_set_fd_events(ssh_event event, socket_t fd, short events);
+LIBSSH_API short ssh_event_get_fd_events(ssh_event event, socket_t fd);
 LIBSSH_API int ssh_event_add_session(ssh_event event, ssh_session session);
 LIBSSH_API int ssh_event_dopoll(ssh_event event, int timeout);
 LIBSSH_API int ssh_event_remove_fd(ssh_event event, socket_t fd);
