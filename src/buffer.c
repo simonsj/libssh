@@ -33,6 +33,12 @@
 #include "libssh/priv.h"
 #include "libssh/buffer.h"
 
+/*
+ * 33 kilobytes is a bit more than the default
+ * initial remote window size of 32 kilobytes.
+ */
+#define BUFFER_INIT_SIZE (1024 * 33)
+
 /**
  * @defgroup libssh_buffer The SSH buffer functions.
  * @ingroup libssh
@@ -88,6 +94,16 @@ struct ssh_buffer_struct *ssh_buffer_new(void) {
   }
   memset(buf, 0, sizeof(struct ssh_buffer_struct));
   buffer_verify(buf);
+
+#ifdef BUFFER_INIT_SIZE
+  buf->data = malloc(BUFFER_INIT_SIZE);
+  if (buf->data == NULL) {
+    SAFE_FREE(buf);
+    return buf;
+  }
+  buf->allocated = BUFFER_INIT_SIZE;
+#endif /* BUFFER_INIT_SIZE */
+
   return buf;
 }
 
