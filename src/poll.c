@@ -765,6 +765,63 @@ int ssh_event_add_fd(ssh_event event, socket_t fd, short events,
 }
 
 /**
+ * @brief Set the poll events of interest for the given event and fd.
+ *
+ * @param event         The ssh_event
+ * @param fd            Socket of interest.
+ * @param events        Poll events to be monitored (POLLIN, POLLPRI, POLLOUT).
+ *
+ * @returns SSH_OK      on success
+ *          SSH_ERROR   on failure
+ */
+int ssh_event_set_fd_events(ssh_event event, socket_t fd, short events) {
+    int i, used;
+    int rc = SSH_ERROR;
+
+    if (event == NULL || event->ctx == NULL) {
+        return SSH_ERROR;
+    }
+
+    used = event->ctx->polls_used;
+    for (i = 0; i < used; i++) {
+        if (fd == event->ctx->pollfds[i].fd) {
+            ssh_poll_handle p = event->ctx->pollptrs[i];
+            ssh_poll_set_events(p, events);
+            rc = SSH_OK;
+            break;
+        }
+    }
+
+    return rc;
+}
+
+/**
+ * @brief Get the poll events of interest for the given event and fd.
+ *
+ * @param event         The ssh_event
+ * @param fd            Socket of interest.
+ *
+ * @returns currently set events for given event and fd; -1 upon error
+ */
+short ssh_event_get_fd_events(ssh_event event, socket_t fd) {
+    int i, used;
+
+    if (event == NULL || event->ctx == NULL) {
+        return SSH_ERROR;
+    }
+
+    used = event->ctx->polls_used;
+    for (i = 0; i < used; i++) {
+        if (fd == event->ctx->pollfds[i].fd) {
+            ssh_poll_handle p = event->ctx->pollptrs[i];
+            return ssh_poll_get_events(p);
+        }
+    }
+
+    return SSH_ERROR;
+}
+
+/**
  * @brief remove the poll handle from session and assign them to a event,
  * when used in blocking mode.
  *
