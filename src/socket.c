@@ -53,6 +53,28 @@
 #include "libssh/poll.h"
 #include "libssh/session.h"
 
+#define XCLOSE
+#ifdef XCLOSE
+#include <assert.h>
+static int xclose_socket(int fd)
+{
+	int rc = 0;
+
+	if (fd == -1) {
+		return 0;
+	}
+
+	do {
+		rc = close(fd);
+	} while ((rc != 0) && (errno == EINTR));
+
+	if (rc != 0) {
+		assert(rc == 0 && "xclose_socket failed");
+	}
+
+	return rc;
+}
+#endif /* XCLOSE */
 /**
  * @internal
  *
@@ -429,9 +451,17 @@ void ssh_socket_close(ssh_socket s){
     /* fd_in = fd_out under win32 */
     s->last_errno = WSAGetLastError();
 #else
+
+#ifdef XCLOSE
+    xclose_socket(s->fd_in);
+    if(s->fd_out != s->fd_in && s->fd_out != -1)
+      xclose_socket(s->fd_out);
+#else /* XCLOSE */
     close(s->fd_in);
     if(s->fd_out != s->fd_in && s->fd_out != -1)
       close(s->fd_out);
+#endif /* XCLOSE */
+
     s->last_errno = errno;
 #endif
     s->fd_in = s->fd_out = SSH_INVALID_SOCKET;
