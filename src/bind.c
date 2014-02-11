@@ -70,6 +70,29 @@
 
 #endif /* _WIN32 */
 
+#define XCLOSE
+#ifdef XCLOSE
+#include <assert.h>
+static int xclose_bind(int fd)
+{
+	int rc = 0;
+
+	if (fd == -1) {
+		return 0;
+	}
+
+	do {
+		rc = close(fd);
+	} while ((rc != 0) && (errno == EINTR));
+
+	if (rc != 0) {
+		assert(rc == 0 && "xclose_bind failed");
+	}
+
+	return rc;
+}
+#endif /* XCLOSE */
+
 static socket_t bind_socket(ssh_bind sshbind, const char *hostname,
     int port) {
     char port_c[6];
@@ -261,7 +284,11 @@ int ssh_bind_listen(ssh_bind sshbind) {
           ssh_set_error(sshbind, SSH_FATAL,
                   "Listening to socket %d: %s",
                   fd, strerror(errno));
+#ifdef XCLOSE
+          xclose_bind(fd);
+#else /* XCLOSE */
           CLOSE_SOCKET(fd);
+#endif /* XCLOSE */
           ssh_key_free(sshbind->dsa);
           sshbind->dsa = NULL;
           ssh_key_free(sshbind->rsa);
@@ -352,7 +379,11 @@ void ssh_bind_free(ssh_bind sshbind){
   }
 
   if (sshbind->bindfd >= 0) {
-      CLOSE_SOCKET(sshbind->bindfd);
+#ifdef XCLOSE
+    xclose_bind(sshbind->bindfd);
+#else /* XCLOSE */
+    CLOSE_SOCKET(sshbind->bindfd);
+#endif /* XCLOSE */
   }
   sshbind->bindfd = SSH_INVALID_SOCKET;
 
