@@ -555,6 +555,9 @@ SSH_PACKET_CALLBACK(channel_rcv_data){
                                                 is_stderr,
                                                 channel->callbacks->userdata);
       if(rest > 0) {
+        if (channel->counter != NULL) {
+            channel->counter->in_bytes += rest;
+        }
         buffer_pass_bytes(buf, rest);
       }
       if (channel->local_window + buffer_get_rest_len(buf) < WINDOWLIMIT) {
@@ -1386,6 +1389,9 @@ int channel_write_common(ssh_channel channel, const void *data,
     channel->remote_window -= effectivelen;
     len -= effectivelen;
     data = ((uint8_t*)data + effectivelen);
+    if (channel->counter != NULL) {
+        channel->counter->out_bytes += effectivelen;
+    }
   }
   /* it's a good idea to flush the socket now */
   rc = ssh_channel_flush(channel);
@@ -2818,6 +2824,9 @@ int ssh_channel_read_timeout(ssh_channel channel,
   len = (len > count ? count : len);
   memcpy(dest, buffer_get_rest(stdbuf), len);
   buffer_pass_bytes(stdbuf,len);
+  if (channel->counter != NULL) {
+      channel->counter->in_bytes += len;
+  }
   /* Authorize some buffering while userapp is busy */
   if (channel->local_window < WINDOWLIMIT) {
     if (grow_window(session, channel, 0) < 0) {
@@ -3242,6 +3251,31 @@ int ssh_channel_select(ssh_channel *readchans, ssh_channel *writechans,
   if(event)
     ssh_event_free(event);
   return 0;
+}
+
+/**
+ * @brief Set the channel data counter.
+ *
+ * @code
+ * struct ssh_counter_struct counter = {
+ *     .in_bytes = 0,
+ *     .out_bytes = 0,
+ *     .in_packets = 0,
+ *     .out_packets = 0
+ * };
+ *
+ * ssh_channel_set_counter(channel, &counter);
+ * @endcode
+ *
+ * @param[in] channel The SSH channel.
+ *
+ * @param[in] counter Counter for bytes handled by the channel.
+ */
+void ssh_channel_set_counter(ssh_channel channel,
+                             ssh_counter counter) {
+    if (channel != NULL) {
+        channel->counter = counter;
+    }
 }
 
 #if WITH_SERVER
