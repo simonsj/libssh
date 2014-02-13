@@ -106,7 +106,7 @@ LIBSSH_API ssh_bind ssh_bind_new(void);
  *                used by SSHv2. (const char *).
  *
  *              - SSH_BIND_OPTIONS_RSAKEY
- *                This specifies the file containing the private host dsa key
+ *                This specifies the file containing the private host rsa key
  *                used by SSHv2. (const char *).
  *
  *              - SSH_BIND_OPTIONS_BANNER
