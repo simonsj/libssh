@@ -1347,7 +1347,10 @@ static int ssh_bind_options_set_algo(ssh_bind sshbind, int algo,
  *                        Set the path to the dsa ssh host key (string).
  *
  *                      SSH_BIND_OPTIONS_RSAKEY:
- *                        Set the path to the ssh host rsa key (string).
+ *                        Set the path to the rsa ssh host key (string).
+ *
+ *                      SSH_BIND_OPTIONS_ECDSAKEY:
+ *                        Set the path to the ecdsa ssh host key (string).
  *
  *                      SSH_BIND_OPTIONS_BANNER:
  *                        Set the server banner sent to clients (string).
@@ -1465,6 +1468,19 @@ int ssh_bind_options_set(ssh_bind sshbind, enum ssh_bind_options_e type,
         SAFE_FREE(sshbind->rsakey);
         sshbind->rsakey = strdup(value);
         if (sshbind->rsakey == NULL) {
+          ssh_set_error_oom(sshbind);
+          return -1;
+        }
+      }
+      break;
+    case SSH_BIND_OPTIONS_ECDSAKEY:
+      if (value == NULL) {
+        ssh_set_error_invalid(sshbind);
+        return -1;
+      } else {
+        SAFE_FREE(sshbind->ecdsakey);
+        sshbind->ecdsakey = strdup(value);
+        if (sshbind->ecdsakey == NULL) {
           ssh_set_error_oom(sshbind);
           return -1;
         }
