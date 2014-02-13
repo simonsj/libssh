@@ -44,7 +44,8 @@ enum ssh_bind_options_e {
   SSH_BIND_OPTIONS_RSAKEY,
   SSH_BIND_OPTIONS_BANNER,
   SSH_BIND_OPTIONS_LOG_VERBOSITY,
-  SSH_BIND_OPTIONS_LOG_VERBOSITY_STR
+  SSH_BIND_OPTIONS_LOG_VERBOSITY_STR,
+  SSH_BIND_OPTIONS_ECDSAKEY
 };
 
 typedef struct ssh_bind_struct* ssh_bind;
@@ -107,6 +108,10 @@ LIBSSH_API ssh_bind ssh_bind_new(void);
  *
  *              - SSH_BIND_OPTIONS_RSAKEY
  *                This specifies the file containing the private host rsa key
+ *                used by SSHv2. (const char *).
+ *
+ *              - SSH_BIND_OPTIONS_ECDSAKEY
+ *                This specifies the file containing the private host ecdsa key
  *                used by SSHv2. (const char *).
  *
  *              - SSH_BIND_OPTIONS_BANNER
