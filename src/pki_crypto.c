@@ -346,11 +346,11 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
     case SSH_KEYTYPE_ECDSA:
 #ifdef HAVE_OPENSSL_ECC
         /* privkey -> pubkey */
+        new->ecdsa_nid = key->ecdsa_nid;
+
         if (demote && ssh_key_is_private(key)) {
             const EC_POINT *p;
             int ok;
-
-            new->ecdsa_nid = key->ecdsa_nid;
 
             new->ecdsa = EC_KEY_new_by_curve_name(key->ecdsa_nid);
             if (new->ecdsa == NULL) {
