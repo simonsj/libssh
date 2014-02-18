@@ -105,6 +105,11 @@ static const char *pki_key_ecdsa_nid_to_name(int nid)
     return "unknown";
 }
 
+const char *pki_key_ecdsa_name(const ssh_key key)
+{
+	return pki_key_ecdsa_nid_to_name(key->ecdsa_nid);
+}
+
 static const char *pki_key_ecdsa_nid_to_char(int nid)
 {
     switch (nid) {
