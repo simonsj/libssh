@@ -56,6 +56,20 @@
 #define XCLOSE
 #ifdef XCLOSE
 #include <assert.h>
+
+static void _read_until_socket_eof(int fd)
+{
+	ssize_t nr;
+	int tries = 0;
+	char buf[65535];
+
+	do {
+		nr = read(fd, &buf[0], sizeof(buf));
+		if (++tries > 4)
+			break;
+	} while ((nr < 0) && (errno == EAGAIN || errno == EINTR));
+}
+
 static int xclose_socket(int fd)
 {
 	int rc = 0;
@@ -63,6 +77,9 @@ static int xclose_socket(int fd)
 	if (fd == -1) {
 		return 0;
 	}
+
+	shutdown(fd, SHUT_RDWR);
+	_read_until_socket_eof(fd);
 
 	do {
 		rc = close(fd);
