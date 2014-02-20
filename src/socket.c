@@ -73,7 +73,19 @@ static int xclose_socket(int fd)
 
 	ioctl(fd, SIOCINQ, &bytes_in_recvq);
 	ioctl(fd, SIOCOUTQ, &bytes_in_sendq);
-	SSH_LOG(SSH_LOG_RARE, "xclose_socket fd %d recvq %d sendq %d",
+	SSH_LOG(SSH_LOG_RARE, "fd %d recvq %d sendq %d",
+	                      fd, bytes_in_recvq, bytes_in_sendq);
+
+	shutdown(fd, SHUT_WR);
+	ioctl(fd, SIOCINQ, &bytes_in_recvq);
+	ioctl(fd, SIOCOUTQ, &bytes_in_sendq);
+	SSH_LOG(SSH_LOG_RARE, "(after shutdown WR) fd %d recvq %d sendq %d",
+	                      fd, bytes_in_recvq, bytes_in_sendq);
+
+	shutdown(fd, SHUT_RD);
+	ioctl(fd, SIOCINQ, &bytes_in_recvq);
+	ioctl(fd, SIOCOUTQ, &bytes_in_sendq);
+	SSH_LOG(SSH_LOG_RARE, "(after shutdown RD) fd %d recvq %d sendq %d",
 	                      fd, bytes_in_recvq, bytes_in_sendq);
 
 	do {
