@@ -44,6 +44,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+
+/* for SIOCIN|OUTQ */
+#include <linux/sockios.h>
+#include <sys/ioctl.h>
+
 #endif /* _WIN32 */
 
 #include "libssh/priv.h"
@@ -59,10 +64,17 @@
 static int xclose_socket(int fd)
 {
 	int rc = 0;
+	int bytes_in_recvq = 0;
+	int bytes_in_sendq = 0;
 
 	if (fd == -1) {
 		return 0;
 	}
+
+	ioctl(fd, SIOCINQ, &bytes_in_recvq);
+	ioctl(fd, SIOCOUTQ, &bytes_in_sendq);
+	SSH_LOG(SSH_LOG_RARE, "xclose_socket fd %d recvq %d sendq %d",
+	                      fd, bytes_in_recvq, bytes_in_sendq);
 
 	do {
 		rc = close(fd);
