@@ -118,6 +118,31 @@ ssh_channel ssh_channel_new(ssh_session session) {
 }
 
 /**
+ * @brief Return whether EOF has been sent on the given channel.
+ *
+ * @param[in]  channel  The channel to check whether EOF has been sent.
+ *
+ * @return              0 if EOF has not yet been sent, non-zero otherwise.
+ *
+ * @see ssh_channel_send_eof
+ */
+int ssh_channel_is_local_eof(ssh_channel c) {
+    return c->local_eof;
+}
+/**
+ * @brief Return whether close has been sent for the given channel.
+ *
+ * @param[in]  channel  The channel to check whether close has been sent.
+ *
+ * @return              0 if close has not yet been sent, non-zero otherwise.
+ *
+ * @see ssh_channel_close
+ */
+int ssh_channel_is_local_closed(ssh_channel c) {
+    return c->local_close;
+}
+
+/**
  * @internal
  *
  * @brief Create a new channel identifier.
@@ -1149,23 +1174,26 @@ int ssh_channel_close(ssh_channel channel) {
         return rc;
     }
 
-    rc = ssh_buffer_pack(session->out_buffer,
-                         "bd",
-                         SSH2_MSG_CHANNEL_CLOSE,
-                         channel->remote_channel);
-    if (rc != SSH_OK) {
-        ssh_set_error_oom(session);
-        goto error;
-    }
+    if (channel->local_close == 0) {
+        rc = ssh_buffer_pack(session->out_buffer,
+                             "bd",
+                             SSH2_MSG_CHANNEL_CLOSE,
+                             channel->remote_channel);
+        if (rc != SSH_OK) {
+            ssh_set_error_oom(session);
+            goto error;
+        }
 
-    rc = ssh_packet_send(session);
-    SSH_LOG(SSH_LOG_PACKET,
-            "Sent a close on client channel (%d:%d)",
-            channel->local_channel,
-            channel->remote_channel);
+        rc = ssh_packet_send(session);
+        SSH_LOG(SSH_LOG_PACKET,
+                "Sent a close on client channel (%d:%d)",
+                channel->local_channel,
+                channel->remote_channel);
 
-    if (rc == SSH_OK) {
-        channel->state = SSH_CHANNEL_STATE_CLOSED;
+        if (rc == SSH_OK) {
+            channel->state = SSH_CHANNEL_STATE_CLOSED;
+            channel->local_close = 1;
+        }
     }
 
     rc = ssh_channel_flush(channel);
@@ -1174,9 +1202,9 @@ int ssh_channel_close(ssh_channel channel) {
     }
 
     return rc;
+
 error:
     ssh_buffer_reinit(session->out_buffer);
-
     return rc;
 }
 

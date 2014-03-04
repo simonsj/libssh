@@ -59,6 +59,7 @@ struct ssh_channel_struct {
     uint32_t local_channel;
     uint32_t local_window;
     int local_eof;
+    int local_close;
     uint32_t local_maxpacket;
 
     uint32_t remote_channel;
