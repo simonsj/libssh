@@ -117,6 +117,14 @@ ssh_channel ssh_channel_new(ssh_session session) {
   return channel;
 }
 
+int ssh_channel_is_local_eof(ssh_channel c) {
+	return c->local_eof;
+}
+
+int ssh_channel_is_local_closed(ssh_channel c) {
+	return c->local_close;
+}
+
 /**
  * @internal
  *
@@ -1222,6 +1230,8 @@ int ssh_channel_close(ssh_channel channel){
   if(rc == SSH_OK) {
     channel->state=SSH_CHANNEL_STATE_CLOSED;
   }
+
+  channel->local_close = 1;
 
   rc = ssh_channel_flush(channel);
   if(rc == SSH_ERROR)

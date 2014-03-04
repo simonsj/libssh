@@ -59,6 +59,7 @@ struct ssh_channel_struct {
     uint32_t local_channel;
     uint32_t local_window;
     int local_eof;
+    int local_close;
     uint32_t local_maxpacket;
 
     uint32_t remote_channel;
@@ -114,5 +115,8 @@ int channel_request_exec1(ssh_channel channel, const char *cmd);
 int channel_write1(ssh_channel channel, const void *data, int len);
 ssh_channel ssh_get_channel1(ssh_session session);
 #endif
+
+int ssh_channel_is_local_eof(ssh_channel c);
+int ssh_channel_is_local_closed(ssh_channel c);
 
 #endif /* CHANNELS_H_ */
