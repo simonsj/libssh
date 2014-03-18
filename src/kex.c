@@ -281,6 +281,9 @@ SSH_PACKET_CALLBACK(ssh_packet_kexinit){
   char *strings[KEX_METHODS_SIZE];
   int i;
 
+  uint8_t first_kex_packet_follows = 0;
+  uint32_t kexinit_reserved = 0;
+
   (void)type;
   (void)user;
   memset(strings, 0, sizeof(strings));
@@ -342,6 +345,20 @@ SSH_PACKET_CALLBACK(ssh_packet_kexinit){
       session->next_crypto->server_kex.methods[i] = strings[i];
     }
   }
+
+  /*
+   * Handle the two final fields for the KEXINIT message (RFC 4253 7.1):
+   *
+   *      boolean      first_kex_packet_follows
+   *      uint32       0 (reserved for future extension)
+   *
+   * Notably if clients set 'first_kex_packet_follows', it is expected
+   * that its value is included when computing the session ID (see
+   * 'make_sessionid').
+   */
+  buffer_get_u8(packet, &first_kex_packet_follows);
+  buffer_add_u8(session->in_hashbuf, first_kex_packet_follows);
+  buffer_add_u32(session->in_hashbuf, kexinit_reserved);
 
   session->session_state=SSH_SESSION_STATE_KEXINIT_RECEIVED;
   session->dh_handshake_state=DH_STATE_INIT;

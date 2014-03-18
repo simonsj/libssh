@@ -638,17 +638,29 @@ int make_sessionid(ssh_session session) {
     client_hash = session->in_hashbuf;
   }
 
-  if (buffer_add_u32(server_hash, 0) < 0) {
-    goto error;
-  }
+  /*
+   * Handle the two final fields for the KEXINIT message (RFC 4253 7.1):
+   *
+   *      boolean      first_kex_packet_follows
+   *      uint32       0 (reserved for future extension)
+   */
   if (buffer_add_u8(server_hash, 0) < 0) {
     goto error;
   }
-  if (buffer_add_u32(client_hash, 0) < 0) {
+  if (buffer_add_u32(server_hash, 0) < 0) {
     goto error;
   }
-  if (buffer_add_u8(client_hash, 0) < 0) {
-    goto error;
+
+  /*
+   * These fields are handled for the server case in ssh_packet_kexinit.
+   */
+  if (session->client) {
+    if (buffer_add_u8(client_hash, 0) < 0) {
+      goto error;
+    }
+    if (buffer_add_u32(client_hash, 0) < 0) {
+      goto error;
+    }
   }
 
   len = ntohl(buffer_get_rest_len(client_hash));
