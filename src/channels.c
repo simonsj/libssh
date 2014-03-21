@@ -679,9 +679,12 @@ SSH_PACKET_CALLBACK(channel_rcv_request) {
 	char *request=NULL;
     uint8_t status;
     int rc;
+#define DISABLE_AUTH_AGENT_REQ
+#ifdef DISABLE_AUTH_AGENT_REQ
+	uint8_t want_reply;
+#endif /* DISABLE_AUTH_AGENT_REQ */
 	(void)user;
 	(void)type;
-
 	channel = channel_from_msg(session,packet);
 	if (channel == NULL) {
 		SSH_LOG(SSH_LOG_FUNCTIONS,"%s", ssh_get_error(session));
@@ -793,15 +796,39 @@ SSH_PACKET_CALLBACK(channel_rcv_request) {
 	  return SSH_PACKET_USED;
 	}
 
+  /*
+   *
+   * XXX: DISABLE_AUTH_AGENT_REQ
+   *   Putty can send these auth-agent-req messages, and sets the
+   *   'want-reply' flag for them.  If they're dropped on the floor
+   *   as-is done here, sessions will just hang on the client-side.
+   *
+   */
   if (strcmp(request, "auth-agent-req@openssh.com") == 0) {
     SAFE_FREE(request);
     SSH_LOG(SSH_LOG_PROTOCOL, "Received an auth-agent-req request");
+#ifndef DISABLE_AUTH_AGENT_REQ
     ssh_callbacks_execute_list(channel->callbacks,
                                ssh_channel_callbacks,
                                channel_auth_agent_req_function,
                                channel->session,
                                channel);
+#else  /* DISABLE_AUTH_AGENT_REQ */
+    want_reply = status;
+    if (want_reply) {
+      rc = ssh_buffer_add_u8(session->out_buffer, SSH2_MSG_CHANNEL_FAILURE);
+      if (rc < 0) {
+        return SSH_PACKET_USED;
+      }
 
+      rc = ssh_buffer_add_u32(session->out_buffer, htonl(channel->remote_channel));
+      if (rc < 0) {
+        return SSH_PACKET_USED;
+      }
+
+      ssh_packet_send(session);
+    }
+#endif /* DISABLE_AUTH_AGENT_REQ */
     return SSH_PACKET_USED;
   }
 #ifdef WITH_SERVER
