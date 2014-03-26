@@ -854,7 +854,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
         if (digest == NULL) {
             ssh_string_free(sig_blob);
             SSH_LOG(SSH_LOG_PACKET, "Failed to get digest");
-            msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
+            msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG_DIGEST;
             goto end;
         }
 
@@ -867,7 +867,7 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
         ssh_buffer_free(digest);
         if (rc < 0) {
             SSH_LOG(SSH_LOG_PACKET, "Received invalid signature from peer");
-            msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
+            msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG_SIG;
             goto end;
         }
 
