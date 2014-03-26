@@ -1474,8 +1474,11 @@ int pki_signature_verify(ssh_session session,
             if (rc <= 0) {
                 ssh_set_error(session,
                               SSH_FATAL,
-                              "RSA error: %s",
-                              ERR_error_string(ERR_get_error(), NULL));
+                              "RSA error: %s (hlen %zd siglen %zd type %d)",
+                              ERR_error_string(ERR_get_error(), NULL),
+                              hlen,
+                              ssh_string_len(sig->rsa_sig),
+                              key->type);
                 return SSH_ERROR;
             }
             break;
