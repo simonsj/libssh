@@ -21,6 +21,8 @@
 #ifndef PACKET_H_
 #define PACKET_H_
 
+#include "libssh/wrapper.h"
+
 struct ssh_socket_struct;
 
 /* this structure should go someday */
@@ -80,8 +82,9 @@ uint32_t packet_decrypt_len(ssh_session session, char *crypted);
 int packet_decrypt(ssh_session session, void *packet, unsigned int len);
 unsigned char *packet_encrypt(ssh_session session,
                               void *packet,
-                              unsigned int len);
+                              unsigned int len,
+                              enum ssh_hmac_e type);
 int packet_hmac_verify(ssh_session session,ssh_buffer buffer,
-                       unsigned char *mac);
+                       unsigned char *mac, enum ssh_hmac_e type);
 
 #endif /* PACKET_H_ */
