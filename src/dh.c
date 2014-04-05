@@ -881,6 +881,7 @@ static int generate_one_key(ssh_string k,
     if (tmp == NULL) {
       return -1;
     }
+    *output = tmp;
 
     ctx = ssh_mac_ctx_init(crypto->mac_type);
     if (ctx == NULL) {
@@ -892,7 +893,6 @@ static int generate_one_key(ssh_string k,
     ssh_mac_update(ctx, tmp, size);
     ssh_mac_final(tmp + size, ctx);
     size += crypto->digest_len;
-    *output = tmp;
   }
 
   return 0;
