@@ -648,6 +648,8 @@ LIBSSH_API const char* ssh_get_clientbanner(ssh_session session);
 LIBSSH_API const char* ssh_get_serverbanner(ssh_session session);
 LIBSSH_API const char* ssh_get_cipher_in(ssh_session session);
 LIBSSH_API const char* ssh_get_cipher_out(ssh_session session);
+LIBSSH_API const char* ssh_get_hmac_in(ssh_session session);
+LIBSSH_API const char* ssh_get_hmac_out(ssh_session session);
 
 #ifndef LIBSSH_LEGACY_0_4
 #include "libssh/legacy.h"
