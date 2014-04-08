@@ -275,6 +275,43 @@ char *ssh_find_matching(const char *available_d, const char *preferred_d){
     return NULL;
 }
 
+/**
+ * @internal
+ * @brief returns whether the first client key exchange algorithm matches
+ *        the first server key exchange algorithm
+ * @returns whether the first client key exchange algorithm matches
+ *          the first server key exchange algorithm
+ */
+static int is_first_kex_packet_follows_guess_wrong(const char *client_kex,
+                                                   const char *server_kex) {
+    int is_wrong = 1;
+    char **server_kex_tokens = NULL;
+    char **client_kex_tokens = tokenize(client_kex);
+
+    if (client_kex_tokens == NULL) {
+        goto out;
+    }
+
+    if (client_kex_tokens[0] == NULL) {
+        goto freeout;
+    }
+
+    server_kex_tokens = tokenize(server_kex);
+    if (server_kex_tokens == NULL) {
+        goto freeout;
+    }
+
+    is_wrong = (strcmp(client_kex_tokens[0], server_kex_tokens[0]) != 0);
+
+    SAFE_FREE(server_kex_tokens[0]);
+    SAFE_FREE(server_kex_tokens);
+freeout:
+    SAFE_FREE(client_kex_tokens[0]);
+    SAFE_FREE(client_kex_tokens);
+out:
+    return is_wrong;
+}
+
 SSH_PACKET_CALLBACK(ssh_packet_kexinit){
 	int server_kex=session->server;
   ssh_string str = NULL;
@@ -359,6 +396,17 @@ SSH_PACKET_CALLBACK(ssh_packet_kexinit){
   buffer_get_u8(packet, &first_kex_packet_follows);
   buffer_add_u8(session->in_hashbuf, first_kex_packet_follows);
   buffer_add_u32(session->in_hashbuf, kexinit_reserved);
+
+  /*
+   * Remember whether 'first_kex_packet_follows' was set and the client
+   * guess was wrong: in this case the next SSH_MSG_KEXDH_INIT message
+   * must be ignored.
+   */
+  if (server_kex && first_kex_packet_follows) {
+    session->first_kex_follows_guess_wrong =
+      is_first_kex_packet_follows_guess_wrong(session->next_crypto->client_kex.methods[SSH_KEX],
+                                              session->next_crypto->server_kex.methods[SSH_KEX]);
+  }
 
   session->session_state=SSH_SESSION_STATE_KEXINIT_RECEIVED;
   session->dh_handshake_state=DH_STATE_INIT;
