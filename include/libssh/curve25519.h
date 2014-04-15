@@ -27,14 +27,16 @@
 #ifdef WITH_NACL
 
 #include <nacl/crypto_scalarmult_curve25519.h>
+#define CURVE25519_SIZE 32
 #define CURVE25519_PUBKEY_SIZE crypto_scalarmult_curve25519_BYTES
 #define CURVE25519_PRIVKEY_SIZE crypto_scalarmult_curve25519_SCALARBYTES
 #define crypto_scalarmult_base crypto_scalarmult_curve25519_base
 #define crypto_scalarmult crypto_scalarmult_curve25519
 #else
 
-#define CURVE25519_PUBKEY_SIZE 32
-#define CURVE25519_PRIVKEY_SIZE 32
+#define CURVE25519_SIZE 32
+#define CURVE25519_PUBKEY_SIZE CURVE25519_SIZE
+#define CURVE25519_PRIVKEY_SIZE CURVE25519_SIZE
 int crypto_scalarmult_base(unsigned char *q, const unsigned char *n);
 int crypto_scalarmult(unsigned char *q, const unsigned char *n, const unsigned char *p);
 #endif /* WITH_NACL */
