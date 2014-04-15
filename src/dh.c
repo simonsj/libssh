@@ -351,42 +351,59 @@ int dh_generate_f(ssh_session session) {
   return 0;
 }
 
-ssh_string make_bignum_string(bignum num) {
-  ssh_string ptr = NULL;
-  int pad = 0;
-  unsigned int len = bignum_num_bytes(num);
-  unsigned int bits = bignum_num_bits(num);
+/**
+ * @internal
+ * @brief return a bignum string of at least the given size
+ *
+ * Returns a bignum string of at least the given size, prepending
+ * zeroes as necessary.  A given size of zero will be ignored.
+ *
+ * @param num       the bignum source for the resulting string
+ * @param min_size  size in bytes of result, or zero for no minimum size
+ *
+ * @returns an ssh_string of at least the given size
+ */
+static ssh_string make_sized_bignum_string(bignum num, unsigned int min_size) {
+    ssh_string ptr = NULL;
+    unsigned int p = 0;
+    unsigned int pad = 0;
+    unsigned int len = bignum_num_bytes(num);
+    unsigned int bits = bignum_num_bits(num);
 
-  if (len == 0) {
-      return NULL;
-  }
+    if (len == 0) {
+        return NULL;
+    }
 
-  /* If the first bit is set we have a negative number */
-  if (!(bits % 8) && bignum_is_bit_set(num, bits - 1)) {
-    pad++;
-  }
+    /* Prepend zero if MSB is set (negative number). */
+    if (!(bits % 8) && bignum_is_bit_set(num, bits - 1)) {
+        pad += 1;
+    }
 
-#ifdef DEBUG_CRYPTO
-  fprintf(stderr, "%d bits, %d bytes, %d padding\n", bits, len, pad);
-#endif /* DEBUG_CRYPTO */
+    /* Ensure padding adds up to min_size. */
+    if ((min_size > 0) && ((len + pad) < min_size)) {
+        pad += (min_size - (len + pad));
+    }
 
-  ptr = ssh_string_new(len + pad);
-  if (ptr == NULL) {
-    return NULL;
-  }
+    ptr = ssh_string_new(len + pad);
+    if (ptr == NULL) {
+        return NULL;
+    }
 
-  /* We have a negative number so we need a leading zero */
-  if (pad) {
-    ptr->data[0] = 0;
-  }
+    while (p < pad) {
+        ptr->data[p++] = 0;
+    }
 
 #ifdef HAVE_LIBGCRYPT
-  bignum_bn2bin(num, len, ptr->data + pad);
+    bignum_bn2bin(num, len, ptr->data + pad);
 #elif HAVE_LIBCRYPTO
-  bignum_bn2bin(num, ptr->data + pad);
+    bignum_bn2bin(num, ptr->data + pad);
 #endif
 
-  return ptr;
+    return ptr;
+}
+
+ssh_string make_bignum_string(bignum num) {
+    return make_sized_bignum_string(num, 0);
 }
 
 bignum make_string_bn(ssh_string string){
@@ -414,6 +431,34 @@ ssh_string dh_get_e(ssh_session session) {
 /* used by server */
 ssh_string dh_get_f(ssh_session session) {
   return make_bignum_string(session->next_crypto->f);
+}
+
+/**
+ * @internal
+ * @brief return given session's shared secret 'K' as an ssh_string
+ * @param session  the session whose 'K' value to retrieve
+ * @returns an ssh_string for the given session's shared secret 'K'
+ * @returns NULL upon error
+ */
+static ssh_string dh_get_k(ssh_session session) {
+    ssh_string k_string = NULL;
+    bignum k = session->next_crypto->k;
+    enum ssh_key_exchange_e kex_type = session->next_crypto->kex_type;
+
+    switch (kex_type) {
+    case SSH_KEX_DH_GROUP1_SHA1:
+    case SSH_KEX_DH_GROUP14_SHA1:
+    case SSH_KEX_ECDH_SHA2_NISTP256:
+        k_string = make_bignum_string(k);
+        break;
+    case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
+        k_string = make_sized_bignum_string(k, CURVE25519_SIZE);
+        break;
+    default:
+        break;
+    }
+
+    return k_string;
 }
 
 void dh_import_pubkey(ssh_session session, ssh_string pubkey_string) {
@@ -742,7 +787,8 @@ int make_sessionid(ssh_session session) {
 #endif
     }
 
-    num = make_bignum_string(session->next_crypto->k);
+    /* Build shared secret 'K' according to session's kex type. */
+    num = dh_get_k(session);
     if (num == NULL) {
         goto error;
     }
@@ -888,7 +934,7 @@ int generate_session_keys(ssh_session session) {
   unsigned char *tmp;
   int rc = -1;
 
-  k_string = make_bignum_string(crypto->k);
+  k_string = dh_get_k(session);
   if (k_string == NULL) {
     ssh_set_error_oom(session);
     goto error;
