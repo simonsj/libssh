@@ -271,9 +271,9 @@ static void torture_pkd_runtest(const char *testname,
 
     /* Asserts did not trip: cleanup logs. */
     snprintf(&logfile[0], sizeof(logfile), "%s.out", testname);
-    //unlink(logfile);
+    unlink(logfile);
     snprintf(&logfile[0], sizeof(logfile), "%s.err", testname);
-    //unlink(logfile);
+    unlink(logfile);
 }
 
 /*
