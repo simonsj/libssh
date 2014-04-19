@@ -75,7 +75,7 @@ void cleanup_ecdsa_keys() {
     cleanup_key(LIBSSH_ECDSA_521_TESTKEY, LIBSSH_ECDSA_521_TESTKEY ".pub");
 }
 
-void setup_openssh_client_rsa_key() {
+static void setup_openssh_client_rsa_key() {
     int rc = 0;
     if (access(OPENSSH_RSA_TESTKEY, F_OK) != 0) {
         rc = system_checked(OPENSSH_KEYGEN " -t rsa -q -N \"\" -f "
@@ -84,8 +84,31 @@ void setup_openssh_client_rsa_key() {
     assert_int_equal(rc, 0);
 }
 
-void cleanup_openssh_client_rsa_key() {
+static void cleanup_openssh_client_rsa_key() {
     cleanup_key(OPENSSH_RSA_TESTKEY, OPENSSH_RSA_TESTKEY ".pub");
+}
+
+static void setup_openssh_client_ed25519_key() {
+    int rc = 0;
+    if (access(OPENSSH_ED25519_TESTKEY, F_OK) != 0) {
+        rc = system_checked(OPENSSH_KEYGEN " -t ed25519 -q -N \"\" -f "
+                            OPENSSH_ED25519_TESTKEY);
+    }
+    assert_int_equal(rc, 0);
+}
+
+static void cleanup_openssh_client_ed25519_key() {
+    cleanup_key(OPENSSH_ED25519_TESTKEY, OPENSSH_ED25519_TESTKEY ".pub");
+}
+
+void setup_openssh_client_keys(void) {
+    setup_openssh_client_rsa_key();
+    setup_openssh_client_ed25519_key();
+}
+
+void cleanup_openssh_client_keys(void) {
+    cleanup_openssh_client_rsa_key();
+    cleanup_openssh_client_ed25519_key();
 }
 
 void setup_dropbear_client_rsa_key() {
