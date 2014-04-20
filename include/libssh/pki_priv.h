@@ -66,6 +66,7 @@ int pki_pubkey_build_rsa(ssh_key key,
                          ssh_string e,
                          ssh_string n);
 int pki_pubkey_build_ecdsa(ssh_key key, int nid, ssh_string e);
+int pki_pubkey_build_ed25519(ssh_key key, ssh_string ed_pk);
 ssh_string pki_publickey_to_blob(const ssh_key key);
 int pki_export_pubkey_rsa1(const ssh_key key,
                            const char *host,

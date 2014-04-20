@@ -22,11 +22,12 @@ void cleanup_dsa_key(void);
 void cleanup_ecdsa_keys(void);
 
 /* Client keys. */
-#define OPENSSH_RSA_TESTKEY   "openssh_testkey.id_rsa"
-#define DROPBEAR_RSA_TESTKEY  "dropbear_testkey.id_rsa"
+#define OPENSSH_RSA_TESTKEY      "openssh_testkey.id_rsa"
+#define OPENSSH_ED25519_TESTKEY  "openssh_testkey.id_ed25519"
+#define DROPBEAR_RSA_TESTKEY     "dropbear_testkey.id_rsa"
 
-void setup_openssh_client_rsa_key(void);
-void cleanup_openssh_client_rsa_key(void);
+void setup_openssh_client_keys(void);
+void cleanup_openssh_client_keys(void);
 
 void setup_dropbear_client_rsa_key(void);
 void cleanup_dropbear_client_rsa_key(void);

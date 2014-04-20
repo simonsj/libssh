@@ -46,6 +46,12 @@
 #include "libssh/pki_priv.h"
 #include "libssh/dh.h"
 
+#if 1 /* Ed25519 from OpenSSH. */
+#include "libssh/ed25519.h"
+#include "libssh/openssh/crypto_api.h"
+#define ED25519_PK_SZ crypto_sign_ed25519_PUBLICKEYBYTES
+#endif /* Ed25519 from OpenSSH */
+
 struct pem_get_password_struct {
     ssh_auth_callback fn;
     void *data;
@@ -225,6 +231,20 @@ int pki_pubkey_build_ecdsa(ssh_key key, int nid, ssh_string e)
 }
 #endif
 
+int pki_pubkey_build_ed25519(ssh_key key, ssh_string ed_pk) {
+    size_t len = ssh_string_len(ed_pk);
+    if (len != ED25519_PK_SZ) {
+        return -1;
+    }
+
+    key->ed_pk = ssh_string_copy(ed_pk);
+    if (key->ed_pk == NULL) {
+        return -1;
+    }
+
+    return 0;
+}
+
 ssh_key pki_key_dup(const ssh_key key, int demote)
 {
     ssh_key new;
@@ -385,6 +405,9 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
         }
         break;
 #endif
+    case SSH_KEYTYPE_ED25519:
+        ssh_key_free(new);
+        return NULL;
     case SSH_KEYTYPE_UNKNOWN:
         ssh_key_free(new);
         return NULL;
@@ -547,6 +570,9 @@ int pki_key_compare(const ssh_key k1,
                 break;
             }
 #endif
+        case SSH_KEYTYPE_ED25519:
+            SSH_LOG(SSH_LOG_RARE, "ed25519 unimplemented");
+            return 1;
         case SSH_KEYTYPE_UNKNOWN:
             return 1;
     }
@@ -650,6 +676,9 @@ ssh_string pki_private_key_to_pem(const ssh_key key,
             }
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            SSH_LOG(SSH_LOG_RARE, "ed25519 unimplemented");
+            /* fall-through */
         case SSH_KEYTYPE_UNKNOWN:
             BIO_free(mem);
             ssh_pki_log("Unkown or invalid private key type %d", key->type);
@@ -773,6 +802,9 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
 
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            SSH_LOG(SSH_LOG_RARE, "ed25519 unimplemented");
+            /* fall-through */
         case SSH_KEYTYPE_UNKNOWN:
             BIO_free(mem);
             ssh_pki_log("Unkown or invalid private key type %d", type);
@@ -1011,6 +1043,15 @@ ssh_string pki_publickey_to_blob(const ssh_key key)
 
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            rc = buffer_add_ssh_string(buffer, key->ed_pk);
+            if (rc < 0) {
+                ssh_buffer_free(buffer);
+                return NULL;
+            }
+
+            break;
+
         case SSH_KEYTYPE_UNKNOWN:
             goto fail;
     }
@@ -1230,6 +1271,9 @@ ssh_string pki_signature_to_blob(const ssh_signature sig)
             break;
         }
 #endif
+        case SSH_KEYTYPE_ED25519:
+            SSH_LOG(SSH_LOG_RARE, "ed25519 unimplemented");
+            return NULL;
         case SSH_KEYTYPE_UNKNOWN:
             ssh_pki_log("Unknown signature key type: %s", sig->type_c);
             return NULL;
@@ -1290,6 +1334,26 @@ static ssh_signature pki_signature_from_rsa_blob(const ssh_key pubkey,
         memcpy(blob_padded_data + pad_len, blob_orig, len);
 
         sig->rsa_sig = sig_blob_padded;
+    }
+
+    return sig;
+
+errout:
+    ssh_signature_free(sig);
+    return NULL;
+}
+
+static ssh_signature pki_signature_from_ed25519_blob(const ssh_key pubkey,
+                                                     const ssh_string sig_blob,
+                                                     ssh_signature sig)
+{
+    if (pubkey->ed_pk == NULL) {
+        goto errout;
+    }
+
+    sig->ed_sig_blob = ssh_string_copy(sig_blob);
+    if (sig->ed_sig_blob == NULL) {
+        goto errout;
     }
 
     return sig;
@@ -1451,6 +1515,9 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
 
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            sig = pki_signature_from_ed25519_blob(pubkey, sig_blob, sig);
+            break;
         case SSH_KEYTYPE_UNKNOWN:
             ssh_pki_log("Unknown signature type");
             ssh_signature_free(sig);
@@ -1513,6 +1580,17 @@ int pki_signature_verify(ssh_session session,
             }
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            rc = ssh_ed25519_verify(key,
+                                    ssh_string_data(sig->ed_sig_blob),
+                                    ssh_string_len(sig->ed_sig_blob),
+                                    hash,
+                                    hlen);
+            if (rc <= 0) {
+                ssh_set_error(session, SSH_FATAL, "ED25519 signature failed");
+                return SSH_ERROR;
+            }
+            break;
         case SSH_KEYTYPE_UNKNOWN:
             ssh_set_error(session, SSH_FATAL, "Unknown public key type");
             return SSH_ERROR;
@@ -1572,6 +1650,9 @@ ssh_signature pki_do_sign(const ssh_key privkey,
 
             break;
 #endif /* HAVE_OPENSSL_ECC */
+        case SSH_KEYTYPE_ED25519:
+            SSH_LOG(SSH_LOG_RARE, "ed25519 unimplemented");
+            /* fall-through */
         case SSH_KEYTYPE_UNKNOWN:
             ssh_signature_free(sig);
             return NULL;
@@ -1619,6 +1700,9 @@ ssh_signature pki_do_sign_sessionid(const ssh_key key,
             }
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            SSH_LOG(SSH_LOG_RARE, "ed25519 unimplemented");
+            /* fall-through */
         case SSH_KEYTYPE_UNKNOWN:
             ssh_signature_free(sig);
             return NULL;

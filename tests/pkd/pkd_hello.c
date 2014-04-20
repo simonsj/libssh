@@ -295,10 +295,17 @@ static void torture_pkd_runtest(const char *testname,
  */
 
 #define CLIENT_ID_FILE OPENSSH_RSA_TESTKEY
-PKDTESTS_DEFAULT(emit_keytest, openssh, OPENSSH_CMD)
-PKDTESTS_KEX(emit_keytest, openssh, OPENSSH_KEX_CMD)
-PKDTESTS_CIPHER(emit_keytest, openssh, OPENSSH_CIPHER_CMD)
-PKDTESTS_MAC(emit_keytest, openssh, OPENSSH_MAC_CMD)
+PKDTESTS_DEFAULT(emit_keytest, openssh_rsa, OPENSSH_CMD)
+PKDTESTS_KEX(emit_keytest, openssh_rsa, OPENSSH_KEX_CMD)
+PKDTESTS_CIPHER(emit_keytest, openssh_rsa, OPENSSH_CIPHER_CMD)
+PKDTESTS_MAC(emit_keytest, openssh_rsa, OPENSSH_MAC_CMD)
+#undef CLIENT_ID_FILE
+
+#define CLIENT_ID_FILE OPENSSH_ED25519_TESTKEY
+PKDTESTS_DEFAULT(emit_keytest, openssh_ed, OPENSSH_CMD)
+PKDTESTS_KEX(emit_keytest, openssh_ed, OPENSSH_KEX_CMD)
+PKDTESTS_CIPHER(emit_keytest, openssh_ed, OPENSSH_CIPHER_CMD)
+PKDTESTS_MAC(emit_keytest, openssh_ed, OPENSSH_MAC_CMD)
 #undef CLIENT_ID_FILE
 
 #define CLIENT_ID_FILE DROPBEAR_RSA_TESTKEY
@@ -330,10 +337,14 @@ struct {
     const UnitTest test[3]; /* requires setup + test + teardown */
 } testmap[] = {
     /* OpenSSH */
-    PKDTESTS_DEFAULT(emit_testmap, openssh, OPENSSH_CMD)
-    PKDTESTS_KEX(emit_testmap, openssh, OPENSSH_KEX_CMD)
-    PKDTESTS_CIPHER(emit_testmap, openssh, OPENSSH_CIPHER_CMD)
-    PKDTESTS_MAC(emit_testmap, openssh, OPENSSH_MAC_CMD)
+    PKDTESTS_DEFAULT(emit_testmap, openssh_rsa, OPENSSH_CMD)
+    PKDTESTS_KEX(emit_testmap, openssh_rsa, OPENSSH_KEX_CMD)
+    PKDTESTS_CIPHER(emit_testmap, openssh_rsa, OPENSSH_CIPHER_CMD)
+    PKDTESTS_MAC(emit_testmap, openssh_rsa, OPENSSH_MAC_CMD)
+    PKDTESTS_DEFAULT(emit_testmap, openssh_ed, OPENSSH_CMD)
+    PKDTESTS_KEX(emit_testmap, openssh_ed, OPENSSH_KEX_CMD)
+    PKDTESTS_CIPHER(emit_testmap, openssh_ed, OPENSSH_CIPHER_CMD)
+    PKDTESTS_MAC(emit_testmap, openssh_ed, OPENSSH_MAC_CMD)
     /* Dropbear */
     PKDTESTS_DEFAULT(emit_testmap, dropbear, DROPBEAR_CMD)
     PKDTESTS_CIPHER(emit_testmap, dropbear, DROPBEAR_CIPHER_CMD)
@@ -351,10 +362,14 @@ static int pkd_run_tests(void) {
     int tindex = 0;
 
     const UnitTest openssh_tests[] = {
-        PKDTESTS_DEFAULT(emit_unit_test_comma, openssh, OPENSSH_CMD)
-        PKDTESTS_KEX(emit_unit_test_comma, openssh, OPENSSH_KEX_CMD)
-        PKDTESTS_CIPHER(emit_unit_test_comma, openssh, OPENSSH_CIPHER_CMD)
-        PKDTESTS_MAC(emit_unit_test_comma, openssh, OPENSSH_MAC_CMD)
+        PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_rsa, OPENSSH_CMD)
+        PKDTESTS_KEX(emit_unit_test_comma, openssh_rsa, OPENSSH_KEX_CMD)
+        PKDTESTS_CIPHER(emit_unit_test_comma, openssh_rsa, OPENSSH_CIPHER_CMD)
+        PKDTESTS_MAC(emit_unit_test_comma, openssh_rsa, OPENSSH_MAC_CMD)
+        PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_ed, OPENSSH_CMD)
+        PKDTESTS_KEX(emit_unit_test_comma, openssh_ed, OPENSSH_KEX_CMD)
+        PKDTESTS_CIPHER(emit_unit_test_comma, openssh_ed, OPENSSH_CIPHER_CMD)
+        PKDTESTS_MAC(emit_unit_test_comma, openssh_ed, OPENSSH_MAC_CMD)
     };
 
     const UnitTest dropbear_tests[] = {
@@ -375,7 +390,7 @@ static int pkd_run_tests(void) {
 
     /* Generate client keys and populate test list for each enabled client. */
     if (is_openssh_client_enabled()) {
-        setup_openssh_client_rsa_key();
+        setup_openssh_client_keys();
         memcpy(&all_tests[tindex], &openssh_tests[0], sizeof(openssh_tests));
         tindex += (sizeof(openssh_tests) / sizeof(openssh_tests[0]));
     }
@@ -417,7 +432,7 @@ static int pkd_run_tests(void) {
     }
 
     if (is_openssh_client_enabled()) {
-        cleanup_openssh_client_rsa_key();
+        cleanup_openssh_client_keys();
     }
 
     /* Clean up any server keys that were generated. */
