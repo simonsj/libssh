@@ -138,6 +138,11 @@ void ssh_key_clean (ssh_key key){
     if(key->ecdsa) EC_KEY_free(key->ecdsa);
 #endif /* HAVE_OPENSSL_ECC */
 #endif
+    if (key->ed_pk) {
+        ssh_string_burn(key->ed_pk);
+        ssh_string_free(key->ed_pk);
+        key->ed_pk = NULL;
+    }
     key->flags=SSH_KEY_FLAG_EMPTY;
     key->type=SSH_KEYTYPE_UNKNOWN;
     key->ecdsa_nid = 0;
@@ -188,6 +193,8 @@ const char *ssh_key_type_to_char(enum ssh_keytypes_e type) {
       return "ssh-rsa1";
     case SSH_KEYTYPE_ECDSA:
       return "ssh-ecdsa";
+    case SSH_KEYTYPE_ED25519:
+      return "ssh-ed25519";
     case SSH_KEYTYPE_UNKNOWN:
       return NULL;
   }
@@ -226,6 +233,8 @@ enum ssh_keytypes_e ssh_key_type_from_name(const char *name) {
             || strcmp(name, "ecdsa-sha2-nistp384") == 0
             || strcmp(name, "ecdsa-sha2-nistp521") == 0) {
         return SSH_KEYTYPE_ECDSA;
+    } else if (strcmp(name, "ssh-ed25519") == 0) {
+        return SSH_KEYTYPE_ED25519;
     }
 
     return SSH_KEYTYPE_UNKNOWN;
@@ -334,6 +343,11 @@ void ssh_signature_free(ssh_signature sig)
 #if defined(HAVE_LIBCRYPTO) && defined(HAVE_OPENSSL_ECC)
             ECDSA_SIG_free(sig->ecdsa_sig);
 #endif
+            break;
+        case SSH_KEYTYPE_ED25519:
+            ssh_string_burn(sig->ed_sig_blob);
+            ssh_string_free(sig->ed_sig_blob);
+            sig->ed_sig_blob = NULL;
             break;
         case SSH_KEYTYPE_UNKNOWN:
             break;
@@ -727,6 +741,24 @@ static int pki_import_pubkey_buffer(ssh_buffer buffer,
             }
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            {
+                ssh_string ed_pk;
+
+                ed_pk = buffer_get_ssh_string(buffer);
+                if (ed_pk == NULL) {
+                    goto fail;
+                }
+
+                rc = pki_pubkey_build_ed25519(key, ed_pk);
+                ssh_string_burn(ed_pk);
+                ssh_string_free(ed_pk);
+                if (rc < 0) {
+                    goto fail;
+                }
+            }
+            break;
+
         case SSH_KEYTYPE_UNKNOWN:
             ssh_pki_log("Unknown public key protocol %d", type);
             goto fail;
@@ -984,6 +1016,9 @@ int ssh_pki_generate(enum ssh_keytypes_e type, int parameter,
                 goto error;
             break;
 #endif
+        case SSH_KEYTYPE_ED25519:
+            SSH_LOG(SSH_LOG_RARE, "ed25519 unimplemented");
+            goto error;
         case SSH_KEYTYPE_UNKNOWN:
             goto error;
     }
@@ -1310,6 +1345,8 @@ int ssh_pki_signature_verify_blob(ssh_session session,
                                   ehash,
                                   elen);
 #endif
+    } else if (key->type == SSH_KEYTYPE_ED25519) {
+        rc = pki_signature_verify(session, sig, key, digest, dlen);
     } else {
         unsigned char hash[SHA_DIGEST_LEN] = {0};
 

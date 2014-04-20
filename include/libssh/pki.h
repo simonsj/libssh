@@ -55,6 +55,7 @@ struct ssh_key_struct {
     void *ecdsa;
 #endif /* HAVE_OPENSSL_EC_H */
 #endif
+    ssh_string ed_pk;
     void *cert;
 };
 
@@ -74,6 +75,7 @@ struct ssh_signature_struct {
     void *ecdsa_sig;
 # endif
 #endif
+    ssh_string ed_sig_blob;
 };
 
 typedef struct ssh_signature_struct *ssh_signature;
