@@ -46,23 +46,15 @@
 #include "libssh/pki_priv.h"
 #include "libssh/dh.h"
 
-#if 1 /* XXX Placeholders. */
-#define ED25519_PK_SZ 32
-static
-int ssh_ed25519_verify(const ssh_key key,
-                       const unsigned char *sigblob,
-                       unsigned int siglen,
-                       const unsigned char *hash,
-                       size_t hlen)
-{
-    (void) key;
-    (void) sigblob;
-    (void) siglen;
-    (void) hash;
-    (void) hlen;
-    return -1; // XXX fail always.
-}
-#endif /* XXX Placeholders. */
+#if 1 /* Ed25519 from OpenSSH. */
+#include "libssh/openssh/crypto_api.h"
+#define ED25519_PK_SZ crypto_sign_ed25519_PUBLICKEYBYTES
+extern int ssh_ed25519_verify(const ssh_key key,
+                              const unsigned char *sigblob,
+                              unsigned int sigblob_len,
+                              const unsigned char *hash,
+                              size_t hlen);
+#endif /* Ed25519 from OpenSSH */
 
 struct pem_get_password_struct {
     ssh_auth_callback fn;

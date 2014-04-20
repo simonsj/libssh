@@ -24,7 +24,9 @@
  * ChaCha based random number generator for OpenBSD.
  */
 
+#if 0 /* LIBSSH */
 #include "includes.h"
+#endif /* LIBSSH */
 
 #include <stdlib.h>
 #include <string.h>
@@ -36,10 +38,16 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 
+#if 0 /* LIBSSH */
 #include "log.h"
+#endif /* LIBSSH */
 
 #define KEYSTREAM_ONLY
+#if 0 /* LIBSSH */
 #include "chacha_private.h"
+#else /* LIBSSH */
+#include "libssh/openssh/chacha_private.h"
+#endif /* LIBSSH */
 
 #ifdef __GNUC__
 #define inline __inline
@@ -79,8 +87,12 @@ _rs_stir(void)
 	u_char rnd[KEYSZ + IVSZ];
 
 	if (RAND_bytes(rnd, sizeof(rnd)) <= 0)
+#if 0 /* LIBSSH */
 		fatal("Couldn't obtain random bytes (error %ld)",
 		    ERR_get_error());
+#else /* LIBSSH */
+		exit(1);
+#endif /* LIBSSH */
 
 	if (!rs_initialized) {
 		rs_initialized = 1;
@@ -120,6 +132,9 @@ _rs_rekey(u_char *dat, size_t datlen)
 	if (dat) {
 		size_t i, m;
 
+#if 1 /* LIBSSH */
+#define MIN(a, b) ((a < b) ? a : b)
+#endif /* LIBSSH */
 		m = MIN(datlen, KEYSZ + IVSZ);
 		for (i = 0; i < m; i++)
 			rs_buf[i] ^= dat[i];
@@ -163,6 +178,10 @@ _rs_random_u32(u_int32_t *val)
 	return;
 }
 
+#if 1 /* LIBSSH */
+void arc4random_stir(void);
+#endif /* LIBSSH */
+
 void
 arc4random_stir(void)
 {
@@ -170,6 +189,10 @@ arc4random_stir(void)
 	_rs_stir();
 	_ARC4_UNLOCK();
 }
+
+#if 1 /* LIBSSH */
+void arc4random_addrandom(u_char *dat, int datlen);
+#endif /* LIBSSH */
 
 void
 arc4random_addrandom(u_char *dat, int datlen)
@@ -188,6 +211,10 @@ arc4random_addrandom(u_char *dat, int datlen)
 	_ARC4_UNLOCK();
 }
 
+#if 1 /* LIBSSH */
+u_int32_t arc4random(void); /* LIBSSH */
+#endif /* LIBSSH */
+
 u_int32_t
 arc4random(void)
 {
@@ -204,6 +231,10 @@ arc4random(void)
  * arc4random_buf().
  */
 # ifndef HAVE_ARC4RANDOM_BUF
+#if 1 /* LIBSSH */
+void arc4random_buf(void *buf, size_t n);
+#endif /* LIBSSH */
+
 void
 arc4random_buf(void *buf, size_t n)
 {
@@ -244,6 +275,10 @@ arc4random_buf(void *_buf, size_t n)
  * [2**32 % upper_bound, 2**32) which maps back to [0, upper_bound)
  * after reduction modulo upper_bound.
  */
+#if 1 /* LIBSSH */
+u_int32_t arc4random_uniform(u_int32_t upper_bound);
+#endif /* LIBSSH */
+
 u_int32_t
 arc4random_uniform(u_int32_t upper_bound)
 {

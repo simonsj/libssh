@@ -6,11 +6,20 @@
  * Copied from supercop-20130419/crypto_sign/ed25519/ref/ge25519.c
  */
 
+#if 0 /* LIBSSH */
 #include "includes.h"
+#endif /* LIBSSH */
 
+#if 0 /* LIBSSH */
 #include "fe25519.h"
 #include "sc25519.h"
 #include "ge25519.h"
+#else /* LIBSSH */
+#include <stdint.h>
+#include "libssh/openssh/fe25519.h"
+#include "libssh/openssh/sc25519.h"
+#include "libssh/openssh/ge25519.h"
+#endif /* LIBSSH */
 
 /* 
  * Arithmetic on the twisted Edwards curve -x^2 + y^2 = 1 + dx^2y^2 
@@ -64,7 +73,11 @@ const ge25519 ge25519_base = {{{0x1A, 0xD5, 0x25, 0x8F, 0x60, 0x2D, 0x56, 0xC9, 
 
 /* Multiples of the base point in affine representation */
 static const ge25519_aff ge25519_base_multiples_affine[425] = {
+#if 0 /* LIBSSH */
 #include "ge25519_base.data"
+#else /* LIBSSH */
+#include "openssh_ge25519_base.data"
+#endif /* LIBSSH */
 };
 
 static void p1p1_to_p2(ge25519_p2 *r, const ge25519_p1p1 *p)

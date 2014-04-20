@@ -8,9 +8,16 @@ D. J. Bernstein
 Public domain.
 */
 
+#if 0 /* LIBSSH */
 #include "includes.h"
+#endif /* LIBSSH */
 
+#if 0 /* LIBSSH */
 #include "crypto_api.h"
+#else /* LIBSSH */
+#include <stdint.h>
+#include "libssh/openssh/crypto_api.h"
+#endif /* LIBSSH */
 
 #define blocks crypto_hashblocks_sha512
 

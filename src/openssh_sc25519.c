@@ -6,9 +6,14 @@
  * Copied from supercop-20130419/crypto_sign/ed25519/ref/sc25519.c
  */
 
+#if 0 /* LIBSSH */
 #include "includes.h"
 
 #include "sc25519.h"
+#else /* LIBSSH */
+#include <stdint.h>
+#include "libssh/openssh/sc25519.h"
+#endif /* LIBSSH */
 
 /*Arithmetic modulo the group order m = 2^252 +  27742317777372353535851937790883648493 = 7237005577332262213973186563042994240857116359379907606001950938285454250989 */
 

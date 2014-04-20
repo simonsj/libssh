@@ -6,12 +6,19 @@
  * Copied from supercop-20130419/crypto_sign/ed25519/ref/fe25519.c
  */
 
+#if 0 /* LIBSSH */
 #include "includes.h"
+#endif /* LIBSSH */
 
 #define WINDOWSIZE 1 /* Should be 1,2, or 4 */
 #define WINDOWMASK ((1<<WINDOWSIZE)-1)
 
+#if 0 /* LIBSSH */
 #include "fe25519.h"
+#else /* LIBSSH */
+#include <stdint.h>
+#include "libssh/openssh/fe25519.h"
+#endif /* LIBSSH */
 
 static crypto_uint32 equal(crypto_uint32 a,crypto_uint32 b) /* 16-bit inputs */
 {

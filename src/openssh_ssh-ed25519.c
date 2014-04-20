@@ -15,22 +15,32 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#if 0 /* LIBSSH */
 #include "includes.h"
+#endif /* LIBSSH */
 
 #include <sys/types.h>
 
+#if 0 /* LIBSSH */
 #include "crypto_api.h"
+#else
+#include <stdint.h>
+#include "libssh/openssh/crypto_api.h"
+#endif /* LIBSSH */
 
 #include <limits.h>
 #include <string.h>
 #include <stdarg.h>
 
+#if 0 /* LIBSSH */
 #include "xmalloc.h"
 #include "log.h"
 #include "buffer.h"
 #include "key.h"
 #include "ssh.h"
+#endif /* LIBSSH */
 
+#if 0 /* LIBSSH */
 int
 ssh_ed25519_sign(const Key *key, u_char **sigp, u_int *lenp,
     const u_char *data, u_int datalen)
@@ -77,7 +87,9 @@ ssh_ed25519_sign(const Key *key, u_char **sigp, u_int *lenp,
 
 	return 0;
 }
+#endif /* LIBSSH */
 
+#if 0 /* LIBSSH original */
 int
 ssh_ed25519_verify(const Key *key, const u_char *signature, u_int signaturelen,
     const u_char *data, u_int datalen)
@@ -146,4 +158,34 @@ ssh_ed25519_verify(const Key *key, const u_char *signature, u_int signaturelen,
 
 	/* translate return code carefully */
 	return (ret == 0) ? 1 : -1;
+}
+#endif /* LIBSSH original */
+
+#include "libssh/priv.h"
+
+#include "libssh/libssh.h"
+#include "libssh/buffer.h"
+#include "libssh/session.h"
+#include "libssh/pki.h"
+#include "libssh/pki_priv.h"
+#include "libssh/dh.h"
+
+int ssh_ed25519_verify(const ssh_key key,
+                       unsigned int sigblob_len,
+                       const unsigned char *hash,
+                       size_t hlen,
+                       const unsigned char *sigblob);
+
+int ssh_ed25519_verify(const ssh_key key,
+                       unsigned int sigblob_len,
+                       const unsigned char *hash,
+                       size_t hlen,
+                       const unsigned char *sigblob)
+{
+    (void) key;
+    (void) sigblob_len;
+    (void) hash;
+    (void) hlen;
+    (void) sigblob;
+    return -1;
 }

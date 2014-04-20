@@ -18,6 +18,10 @@ typedef uint32_t crypto_uint32;
 
 #define randombytes(buf, buf_len) arc4random_buf((buf), (buf_len))
 
+#if 1 /* LIBSSH */
+void arc4random_buf(void *buf, size_t n);
+#endif /* LIBSSH */
+
 #define crypto_hashblocks_sha512_STATEBYTES 64U
 #define crypto_hashblocks_sha512_BLOCKBYTES 128U
 

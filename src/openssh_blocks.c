@@ -5,9 +5,14 @@
  * Copied from nacl-20110221/crypto_hashblocks/sha512/ref/blocks.c
  */
 
+#if 0 /* LIBSSH */
 #include "includes.h"
 
 #include "crypto_api.h"
+#else /* LIBSSH */
+#include <stdint.h>
+#include "libssh/openssh/crypto_api.h"
+#endif /* LIBSSH */
 
 typedef unsigned long long uint64;
 
