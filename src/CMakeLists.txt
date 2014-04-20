@@ -144,6 +144,20 @@ set(libssh_SRCS
   wrapper.c
 )
 
+## openssh sources for Ed25519 pubkey auth support
+#set(libssh_SRCS ${libssh_SRCS}
+#  openssh_openbsd_compat_arc4random.c
+#  openssh_auth.c
+#  openssh_blocks.c
+#  openssh_ed25519.c
+#  openssh_fe25519.c
+#  openssh_ge25519.c
+#  openssh_hash.c
+#  openssh_sc25519.c
+#  openssh_ssh-ed25519.c
+#  openssh_verify.c
+#)
+
 if (WITH_GCRYPT)
     set(libssh_SRCS
         ${libssh_SRCS}
