@@ -175,7 +175,8 @@ static int pkd_auth_pubkey_cb(ssh_session s,
     (void) key;
     (void) state;
     (void) userdata;
-    pkdout("pkd_auth_pubkey_cb state: %d\n", state);
+    pkdout("pkd_auth_pubkey_cb keytype %s, state: %d\n",
+           ssh_key_type_to_char(ssh_key_type(key)), state);
     if ((state == SSH_PUBLICKEY_STATE_NONE) ||
         (state == SSH_PUBLICKEY_STATE_VALID)) {
         return SSH_AUTH_SUCCESS;
