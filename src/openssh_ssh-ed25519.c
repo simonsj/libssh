@@ -169,23 +169,83 @@ ssh_ed25519_verify(const Key *key, const u_char *signature, u_int signaturelen,
 #include "libssh/pki.h"
 #include "libssh/pki_priv.h"
 #include "libssh/dh.h"
+#include "libssh/ed25519.h"
 
 int ssh_ed25519_verify(const ssh_key key,
+                       const unsigned char *sigblob,
                        unsigned int sigblob_len,
                        const unsigned char *hash,
-                       size_t hlen,
-                       const unsigned char *sigblob);
-
-int ssh_ed25519_verify(const ssh_key key,
-                       unsigned int sigblob_len,
-                       const unsigned char *hash,
-                       size_t hlen,
-                       const unsigned char *sigblob)
+                       size_t hlen)
 {
-    (void) key;
-    (void) sigblob_len;
-    (void) hash;
-    (void) hlen;
-    (void) sigblob;
-    return -1;
+    int ret = -1;
+    size_t len = 0;
+    ssh_buffer buffer;
+
+    unsigned char *sm = NULL;
+    unsigned char *m = NULL;
+    unsigned long long smlen, mlen;
+
+    if (key->type != SSH_KEYTYPE_ED25519) {
+        SSH_LOG(SSH_LOG_RARE, "non-ed25519 keytype (%d)", key->type);
+        goto out;
+    }
+
+    len = sigblob_len;
+    if (len > crypto_sign_ed25519_BYTES) {
+        SSH_LOG(SSH_LOG_RARE, "len too big (%zd > %d)",
+                              len, crypto_sign_ed25519_BYTES);
+        goto out;
+    }
+
+    buffer = ssh_buffer_new();
+    if (buffer == NULL) {
+        SSH_LOG(SSH_LOG_RARE, "could not alloc buffer");
+        goto out;
+    }
+
+    ret = ssh_buffer_add_data(buffer, sigblob, sigblob_len);
+    if (ret < 0) {
+        SSH_LOG(SSH_LOG_RARE, "add blob failed");
+        goto outfree;
+    }
+
+    ret = ssh_buffer_add_data(buffer, hash, hlen);
+    if (ret < 0) {
+        SSH_LOG(SSH_LOG_RARE, "add hash failed");
+        goto outfree;
+    }
+
+    smlen = len + hlen;
+    if (smlen != ssh_buffer_get_len(buffer)) {
+        SSH_LOG(SSH_LOG_RARE, "smlen %llu != buflen %d",
+                              smlen, ssh_buffer_get_len(buffer));
+        goto outfree;
+    }
+
+    mlen = smlen;
+    m = malloc(mlen);
+    if (m == NULL) {
+        SSH_LOG(SSH_LOG_RARE, "malloc failed");
+        goto outfree;
+    }
+
+    sm = ssh_buffer_get_begin(buffer);
+    ret = crypto_sign_ed25519_open(m, &mlen, sm, smlen, ssh_string_data(key->ed_pk));
+    if (ret != 0) {
+        SSH_LOG(SSH_LOG_RARE, "crypto sign call failed, ret %d", ret);
+        goto outfree;
+    }
+
+    if (mlen != hlen) {
+        SSH_LOG(SSH_LOG_RARE, "mlen (%llu) != hlen (%zd)", mlen, hlen);
+        ret = -1;
+        goto outfree;
+    }
+
+outfree:
+    ssh_buffer_free(buffer);
+    BURN_BUFFER(m, smlen);
+    free(m);
+out:
+    return (ret == 0) ? 1 : -1;
 }

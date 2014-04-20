@@ -47,13 +47,9 @@
 #include "libssh/dh.h"
 
 #if 1 /* Ed25519 from OpenSSH. */
+#include "libssh/ed25519.h"
 #include "libssh/openssh/crypto_api.h"
 #define ED25519_PK_SZ crypto_sign_ed25519_PUBLICKEYBYTES
-extern int ssh_ed25519_verify(const ssh_key key,
-                              const unsigned char *sigblob,
-                              unsigned int sigblob_len,
-                              const unsigned char *hash,
-                              size_t hlen);
 #endif /* Ed25519 from OpenSSH */
 
 struct pem_get_password_struct {
