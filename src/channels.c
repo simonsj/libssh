@@ -658,6 +658,7 @@ SSH_PACKET_CALLBACK(channel_rcv_request) {
 	ssh_string request_s;
 	char *request;
     uint8_t status;
+    uint8_t want_reply;
     int rc;
 	(void)user;
 	(void)type;
@@ -685,6 +686,7 @@ SSH_PACKET_CALLBACK(channel_rcv_request) {
 
 	/* XXX: status == "want-reply" in the RFC; should be renamed. */
 	buffer_get_u8(packet, (uint8_t *) &status);
+	want_reply = status;
 
 	if (strcmp(request,"exit-status") == 0) {
         uint32_t exit_status = 0;
@@ -851,7 +853,6 @@ SSH_PACKET_CALLBACK(channel_rcv_request) {
             channel->callbacks->userdata);
     }
 #else  /* DISABLE_AUTH_AGENT_REQ */
-    uint8_t want_reply = status;
     if (want_reply) {
       rc = buffer_add_u8(session->out_buffer, SSH2_MSG_CHANNEL_FAILURE);
       if (rc < 0) {
