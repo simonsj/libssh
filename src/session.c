@@ -916,6 +916,18 @@ void ssh_set_counters(ssh_session session, ssh_counter scounter,
     }
 }
 
+uint32_t ssh_session_get_inbuffer_rest_len(ssh_session session)
+{
+	ssh_buffer b = session->in_buffer;
+	return ((b == NULL) ? 0 : buffer_get_rest_len(b));
+}
+
+uint32_t ssh_session_get_outbuffer_rest_len(ssh_session session)
+{
+	ssh_buffer b = session->out_buffer;
+	return ((b == NULL) ? 0 : buffer_get_rest_len(b));
+}
+
 /** @} */
 
 /* vim: set ts=4 sw=4 et cindent: */
