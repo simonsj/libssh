@@ -78,6 +78,12 @@ void cleanup_ecdsa_keys() {
 void setup_openssh_client_keys() {
     int rc = 0;
 
+    if (access(OPENSSH_DSA_TESTKEY, F_OK) != 0) {
+        rc = system_checked(OPENSSH_KEYGEN " -t dsa -q -N \"\" -f "
+                            OPENSSH_DSA_TESTKEY);
+    }
+    assert_int_equal(rc, 0);
+
     if (access(OPENSSH_RSA_TESTKEY, F_OK) != 0) {
         rc = system_checked(OPENSSH_KEYGEN " -t rsa -q -N \"\" -f "
                             OPENSSH_RSA_TESTKEY);
@@ -110,6 +116,7 @@ void setup_openssh_client_keys() {
 }
 
 void cleanup_openssh_client_keys() {
+    cleanup_key(OPENSSH_DSA_TESTKEY, OPENSSH_DSA_TESTKEY ".pub");
     cleanup_key(OPENSSH_RSA_TESTKEY, OPENSSH_RSA_TESTKEY ".pub");
     cleanup_key(OPENSSH_ECDSA256_TESTKEY, OPENSSH_ECDSA256_TESTKEY ".pub");
     cleanup_key(OPENSSH_ECDSA384_TESTKEY, OPENSSH_ECDSA384_TESTKEY ".pub");

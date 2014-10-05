@@ -297,6 +297,14 @@ static void torture_pkd_runtest(const char *testname,
  * Actual test functions are emitted here.
  */
 
+#define CLIENT_ID_FILE OPENSSH_DSA_TESTKEY
+PKDTESTS_DEFAULT(emit_keytest, openssh_dsa, OPENSSH_CMD)
+PKDTESTS_KEX(emit_keytest, openssh_dsa, OPENSSH_KEX_CMD)
+PKDTESTS_CIPHER(emit_keytest, openssh_dsa, OPENSSH_CIPHER_CMD)
+PKDTESTS_CIPHER_AES192(emit_keytest, openssh_dsa, OPENSSH_CIPHER_CMD)
+PKDTESTS_MAC(emit_keytest, openssh_dsa, OPENSSH_MAC_CMD)
+#undef CLIENT_ID_FILE
+
 #define CLIENT_ID_FILE OPENSSH_RSA_TESTKEY
 PKDTESTS_DEFAULT(emit_keytest, openssh_rsa, OPENSSH_CMD)
 PKDTESTS_KEX(emit_keytest, openssh_rsa, OPENSSH_KEX_CMD)
@@ -354,6 +362,12 @@ struct {
     const UnitTest test[3]; /* requires setup + test + teardown */
 } testmap[] = {
     /* OpenSSH */
+    PKDTESTS_DEFAULT(emit_testmap, openssh_dsa, OPENSSH_CMD)
+    PKDTESTS_KEX(emit_testmap, openssh_dsa, OPENSSH_KEX_CMD)
+    PKDTESTS_CIPHER(emit_testmap, openssh_dsa, OPENSSH_CIPHER_CMD)
+    PKDTESTS_CIPHER_AES192(emit_testmap, openssh_dsa, OPENSSH_CIPHER_CMD)
+    PKDTESTS_MAC(emit_testmap, openssh_dsa, OPENSSH_MAC_CMD)
+
     PKDTESTS_DEFAULT(emit_testmap, openssh_rsa, OPENSSH_CMD)
     PKDTESTS_KEX(emit_testmap, openssh_rsa, OPENSSH_KEX_CMD)
     PKDTESTS_CIPHER(emit_testmap, openssh_rsa, OPENSSH_CIPHER_CMD)
@@ -389,6 +403,12 @@ static int pkd_run_tests(void) {
     int tindex = 0;
 
     const UnitTest openssh_tests[] = {
+        PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_dsa, OPENSSH_CMD)
+        PKDTESTS_KEX(emit_unit_test_comma, openssh_dsa, OPENSSH_KEX_CMD)
+        PKDTESTS_CIPHER(emit_unit_test_comma, openssh_dsa, OPENSSH_CIPHER_CMD)
+        PKDTESTS_CIPHER_AES192(emit_unit_test_comma, openssh_dsa, OPENSSH_CIPHER_CMD)
+        PKDTESTS_MAC(emit_unit_test_comma, openssh_dsa, OPENSSH_MAC_CMD)
+
         PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_rsa, OPENSSH_CMD)
         PKDTESTS_KEX(emit_unit_test_comma, openssh_rsa, OPENSSH_KEX_CMD)
         PKDTESTS_CIPHER(emit_unit_test_comma, openssh_rsa, OPENSSH_CIPHER_CMD)
@@ -482,6 +502,8 @@ static int pkd_run_tests(void) {
 int main(int argc, char **argv) {
     int i = 0;
     int rc = 0;
+
+    unsetenv("SSH_AUTH_SOCK");
 
     rc = ssh_init();
     if (rc != 0) {
