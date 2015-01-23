@@ -1030,6 +1030,36 @@ int ssh_match_group(const char *group, const char *object)
     return 0;
 }
 
+int ssh_find_in_commasep_string(const char *in, const char *what)
+{
+    int in_len, what_len;
+
+    if ((in == NULL) || (what == NULL)) {
+        return 0; /* don't deal with null args */
+    }
+
+    in_len = strlen(in);
+    what_len = strlen(what);
+
+    while (1) {
+        /* Is it at the start of the string? */
+        if (in_len >= what_len &&          /* haystack is long enough */
+            !memcmp(what, in, what_len) && /* initial match */
+            (in_len == what_len || in[what_len] == ',')) {
+            return 1;
+        }
+        /* If not, search for the next comma and resume after that. */
+        /* If no comma found, terminate. */
+        while (in_len > 0 && *in != ',') {
+            --in_len, ++in;
+        }
+        if (in_len == 0) {
+            return 0;
+        }
+        --in_len, ++in; /* skip over comma itself */
+    }
+}
+
 /** @} */
 
 /* vim: set ts=4 sw=4 et cindent: */

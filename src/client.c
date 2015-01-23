@@ -197,7 +197,7 @@ end:
  * completed
  */
 static int dh_handshake(ssh_session session) {
-
+  enum ssh_dh_state_e dh_handshake_state = DH_STATE_INIT_SENT;
   int rc = SSH_AGAIN;
 
   switch (session->dh_handshake_state) {
@@ -205,7 +205,12 @@ static int dh_handshake(ssh_session session) {
       switch(session->next_crypto->kex_type){
         case SSH_KEX_DH_GROUP1_SHA1:
         case SSH_KEX_DH_GROUP14_SHA1:
-          rc = ssh_client_dh_init(session);
+          rc = ssh_client_dh_group_init(session);
+          break;
+        case SSH_KEX_DH_GROUP_SHA1:
+        case SSH_KEX_DH_GROUP_SHA256:
+          rc = ssh_client_dh_gex_init(session);
+          dh_handshake_state = DH_STATE_GEX_REQUEST_SENT;
           break;
 #ifdef HAVE_ECDH
         case SSH_KEX_ECDH_SHA2_NISTP256:
@@ -225,7 +230,11 @@ static int dh_handshake(ssh_session session) {
           return SSH_ERROR;
       }
 
-      session->dh_handshake_state = DH_STATE_INIT_SENT;
+      session->dh_handshake_state = dh_handshake_state;
+      break;
+    case DH_STATE_GEX_REQUEST_SENT:
+        /* wait until ssh_packet_dh_reply is called */
+        break;
     case DH_STATE_INIT_SENT:
     	/* wait until ssh_packet_dh_reply is called */
     	break;

@@ -148,6 +148,8 @@ void crypto_free(struct ssh_crypto_struct *crypto){
   cipher_free(crypto->in_cipher);
   cipher_free(crypto->out_cipher);
 
+  bignum_free(crypto->p);
+  bignum_free(crypto->g);
   bignum_free(crypto->e);
   bignum_free(crypto->f);
   bignum_free(crypto->x);
