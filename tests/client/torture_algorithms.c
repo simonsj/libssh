@@ -49,11 +49,13 @@ static void test_algorithm(ssh_session session, const char *algo, const char *hm
     rc = ssh_options_set(session, SSH_OPTIONS_CIPHERS_S_C, algo);
     assert_true(rc == SSH_OK);
 
-    rc = ssh_options_set(session, SSH_OPTIONS_HMAC_C_S, hmac);
-    assert_true(rc == SSH_OK);
+    if (hmac != NULL) {
+        rc = ssh_options_set(session, SSH_OPTIONS_HMAC_C_S, hmac);
+        assert_true(rc == SSH_OK);
 
-    rc = ssh_options_set(session, SSH_OPTIONS_HMAC_S_C, hmac);
-    assert_true(rc == SSH_OK);
+        rc = ssh_options_set(session, SSH_OPTIONS_HMAC_S_C, hmac);
+        assert_true(rc == SSH_OK);
+    }
 
     rc = ssh_connect(session);
     assert_true(rc == SSH_OK);
@@ -161,6 +163,10 @@ static void torture_algorithms_blowfish_cbc_hmac_sha2_256(void **state) {
 
 static void torture_algorithms_blowfish_cbc_hmac_sha2_512(void **state) {
     test_algorithm(*state, "blowfish-cbc", "hmac-sha2-512");
+}
+
+static void torture_algorithms_chacha20_poly1305(void **state) {
+    test_algorithm(*state, "chacha20-poly1305@openssh.com", NULL);
 }
 
 static void torture_algorithms_zlib(void **state) {
@@ -314,6 +320,7 @@ int torture_run_tests(void) {
         unit_test_setup_teardown(torture_algorithms_blowfish_cbc_hmac_sha1, setup, teardown),
         unit_test_setup_teardown(torture_algorithms_blowfish_cbc_hmac_sha2_256, setup, teardown),
         unit_test_setup_teardown(torture_algorithms_blowfish_cbc_hmac_sha2_512, setup, teardown),
+        unit_test_setup_teardown(torture_algorithms_chacha20_poly1305, setup, teardown),
         unit_test_setup_teardown(torture_algorithms_zlib, setup, teardown),
         unit_test_setup_teardown(torture_algorithms_zlib_openssh, setup, teardown),
         unit_test_setup_teardown(torture_algorithms_dh_group1,setup,teardown),
