@@ -167,26 +167,36 @@ static void torture_pkd_setup_ecdsa_521(void **state) {
 
 #define PKDTESTS_KEX(f, client, kexcmd) \
     /* Kex algorithms. */ \
-    f(client, rsa_curve25519_sha256,                  kexcmd("curve25519-sha256@libssh.org"),  setup_rsa,        teardown) \
-    f(client, rsa_ecdh_sha2_nistp256,                 kexcmd("ecdh-sha2-nistp256 "),           setup_rsa,        teardown) \
-    f(client, rsa_diffie_hellman_group14_sha1,        kexcmd("diffie-hellman-group14-sha1"),   setup_rsa,        teardown) \
-    f(client, rsa_diffie_hellman_group1_sha1,         kexcmd("diffie-hellman-group1-sha1"),    setup_rsa,        teardown) \
-    f(client, dsa_curve25519_sha256,                  kexcmd("curve25519-sha256@libssh.org"),  setup_dsa,        teardown) \
-    f(client, dsa_ecdh_sha2_nistp256,                 kexcmd("ecdh-sha2-nistp256 "),           setup_dsa,        teardown) \
-    f(client, dsa_diffie_hellman_group14_sha1,        kexcmd("diffie-hellman-group14-sha1"),   setup_dsa,        teardown) \
-    f(client, dsa_diffie_hellman_group1_sha1,         kexcmd("diffie-hellman-group1-sha1"),    setup_dsa,        teardown) \
-    f(client, ecdsa_256_curve25519_sha256,            kexcmd("curve25519-sha256@libssh.org"),  setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_256_ecdh_sha2_nistp256,           kexcmd("ecdh-sha2-nistp256 "),           setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_256_diffie_hellman_group14_sha1,  kexcmd("diffie-hellman-group14-sha1"),   setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_256_diffie_hellman_group1_sha1,   kexcmd("diffie-hellman-group1-sha1"),    setup_ecdsa_256,  teardown) \
-    f(client, ecdsa_384_curve25519_sha256,            kexcmd("curve25519-sha256@libssh.org"),  setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_384_ecdh_sha2_nistp256,           kexcmd("ecdh-sha2-nistp256 "),           setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_384_diffie_hellman_group14_sha1,  kexcmd("diffie-hellman-group14-sha1"),   setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_384_diffie_hellman_group1_sha1,   kexcmd("diffie-hellman-group1-sha1"),    setup_ecdsa_384,  teardown) \
-    f(client, ecdsa_521_curve25519_sha256,            kexcmd("curve25519-sha256@libssh.org"),  setup_ecdsa_521,  teardown) \
-    f(client, ecdsa_521_ecdh_sha2_nistp256,           kexcmd("ecdh-sha2-nistp256 "),           setup_ecdsa_521,  teardown) \
-    f(client, ecdsa_521_diffie_hellman_group14_sha1,  kexcmd("diffie-hellman-group14-sha1"),   setup_ecdsa_521,  teardown) \
-    f(client, ecdsa_521_diffie_hellman_group1_sha1,   kexcmd("diffie-hellman-group1-sha1"),    setup_ecdsa_521,  teardown)
+    f(client, rsa_curve25519_sha256,                  kexcmd("curve25519-sha256@libssh.org"),           setup_rsa,        teardown) \
+    f(client, rsa_ecdh_sha2_nistp256,                 kexcmd("ecdh-sha2-nistp256 "),                    setup_rsa,        teardown) \
+    f(client, rsa_diffie_hellman_gex_sha1,            kexcmd("diffie-hellman-group-exchange-sha1"),     setup_rsa,        teardown) \
+    f(client, rsa_diffie_hellman_gex_sha256,          kexcmd("diffie-hellman-group-exchange-sha256"),   setup_rsa,        teardown) \
+    f(client, rsa_diffie_hellman_group14_sha1,        kexcmd("diffie-hellman-group14-sha1"),            setup_rsa,        teardown) \
+    f(client, rsa_diffie_hellman_group1_sha1,         kexcmd("diffie-hellman-group1-sha1"),             setup_rsa,        teardown) \
+    f(client, dsa_curve25519_sha256,                  kexcmd("curve25519-sha256@libssh.org"),           setup_dsa,        teardown) \
+    f(client, dsa_ecdh_sha2_nistp256,                 kexcmd("ecdh-sha2-nistp256 "),                    setup_dsa,        teardown) \
+    f(client, dsa_diffie_hellman_gex_sha1,            kexcmd("diffie-hellman-group-exchange-sha1"),     setup_dsa,        teardown) \
+    f(client, dsa_diffie_hellman_gex_sha256,          kexcmd("diffie-hellman-group-exchange-sha256"),   setup_dsa,        teardown) \
+    f(client, dsa_diffie_hellman_group14_sha1,        kexcmd("diffie-hellman-group14-sha1"),            setup_dsa,        teardown) \
+    f(client, dsa_diffie_hellman_group1_sha1,         kexcmd("diffie-hellman-group1-sha1"),             setup_dsa,        teardown) \
+    f(client, ecdsa_256_curve25519_sha256,            kexcmd("curve25519-sha256@libssh.org"),           setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_256_ecdh_sha2_nistp256,           kexcmd("ecdh-sha2-nistp256 "),                    setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_256_diffie_hellman_gex_sha1,      kexcmd("diffie-hellman-group-exchange-sha1"),     setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_256_diffie_hellman_gex_sha256,    kexcmd("diffie-hellman-group-exchange-sha256"),   setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_256_diffie_hellman_group14_sha1,  kexcmd("diffie-hellman-group14-sha1"),            setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_256_diffie_hellman_group1_sha1,   kexcmd("diffie-hellman-group1-sha1"),             setup_ecdsa_256,  teardown) \
+    f(client, ecdsa_384_curve25519_sha256,            kexcmd("curve25519-sha256@libssh.org"),           setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_384_ecdh_sha2_nistp256,           kexcmd("ecdh-sha2-nistp256 "),                    setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_384_diffie_hellman_gex_sha1,      kexcmd("diffie-hellman-group-exchange-sha1"),     setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_384_diffie_hellman_gex_sha256,    kexcmd("diffie-hellman-group-exchange-sha256"),   setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_384_diffie_hellman_group14_sha1,  kexcmd("diffie-hellman-group14-sha1"),            setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_384_diffie_hellman_group1_sha1,   kexcmd("diffie-hellman-group1-sha1"),             setup_ecdsa_384,  teardown) \
+    f(client, ecdsa_521_curve25519_sha256,            kexcmd("curve25519-sha256@libssh.org"),           setup_ecdsa_521,  teardown) \
+    f(client, ecdsa_521_ecdh_sha2_nistp256,           kexcmd("ecdh-sha2-nistp256 "),                    setup_ecdsa_521,  teardown) \
+    f(client, ecdsa_521_diffie_hellman_gex_sha1,      kexcmd("diffie-hellman-group-exchange-sha1"),     setup_ecdsa_521,  teardown) \
+    f(client, ecdsa_521_diffie_hellman_gex_sha256,    kexcmd("diffie-hellman-group-exchange-sha256"),   setup_ecdsa_521,  teardown) \
+    f(client, ecdsa_521_diffie_hellman_group14_sha1,  kexcmd("diffie-hellman-group14-sha1"),            setup_ecdsa_521,  teardown) \
+    f(client, ecdsa_521_diffie_hellman_group1_sha1,   kexcmd("diffie-hellman-group1-sha1"),             setup_ecdsa_521,  teardown)
 
 #define PKDTESTS_CIPHER(f, client, ciphercmd) \
     /* Ciphers. */ \
