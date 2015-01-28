@@ -60,11 +60,14 @@ SSH_PACKET_CALLBACK(ssh_packet_unimplemented);
 SSH_PACKET_CALLBACK(ssh_packet_disconnect_callback);
 SSH_PACKET_CALLBACK(ssh_packet_ignore_callback);
 SSH_PACKET_CALLBACK(ssh_packet_dh_reply);
+SSH_PACKET_CALLBACK(ssh_packet_dh_gex_reply);
 SSH_PACKET_CALLBACK(ssh_packet_newkeys);
 SSH_PACKET_CALLBACK(ssh_packet_service_accept);
 
 #ifdef WITH_SERVER
 SSH_PACKET_CALLBACK(ssh_packet_kexdh_init);
+SSH_PACKET_CALLBACK(ssh_packet_kexdh_gex_init);
+SSH_PACKET_CALLBACK(ssh_packet_kexdh_gex_request);
 #endif
 
 int ssh_packet_send_unimplemented(ssh_session session, uint32_t seqnum);
