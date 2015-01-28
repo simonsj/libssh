@@ -456,6 +456,7 @@ static void *pkd_main(void *args) {
     }
     pkd_state.server_fd = -1;
 out:
+    ctx.pkd_ready = -1;
     ctx.rc = rc;
 
     return NULL;
