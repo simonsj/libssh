@@ -53,6 +53,10 @@ enum ssh_key_exchange_e {
   SSH_KEX_DH_GROUP1_SHA1=1,
   /* diffie-hellman-group14-sha1 */
   SSH_KEX_DH_GROUP14_SHA1,
+  /* diffie-hellman-group-exchange-sha1 */
+  SSH_KEX_DH_GROUP_SHA1,
+  /* diffie-hellman-group-exchange-sha256 */
+  SSH_KEX_DH_GROUP_SHA256,
   /* ecdh-sha2-nistp256 */
   SSH_KEX_ECDH_SHA2_NISTP256,
   /* curve25519-sha256@libssh.org */
@@ -60,7 +64,9 @@ enum ssh_key_exchange_e {
 };
 
 struct ssh_crypto_struct {
-    bignum e,f,x,k,y;
+    bignum p,g,e,f,x,k,y;
+    unsigned int pmin,pbits,pmax; /* preferred size in bits of the group the server will send */
+    int old_gex; /* SSH_MSG_KEX_DH_GEX_REQUEST_OLD used */
 #ifdef HAVE_ECDH
     EC_KEY *ecdh_privkey;
     ssh_string ecdh_client_pubkey;

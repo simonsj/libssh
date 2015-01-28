@@ -88,5 +88,6 @@ int ssh_timeout_elapsed(struct ssh_timestamp *ts, int timeout);
 int ssh_timeout_update(struct ssh_timestamp *ts, int timeout);
 
 int ssh_match_group(const char *group, const char *object);
+int ssh_find_in_commasep_string(const char *in, const char *what);
 
 #endif /* MISC_H_ */

@@ -73,9 +73,17 @@ static ssh_packet_callback default_packet_handlers[]= {
 #endif
   ssh_packet_dh_reply,                     // SSH2_MSG_KEXDH_REPLY                31
                                            // SSH2_MSG_KEX_DH_GEX_GROUP           31
-  NULL,                                    // SSH2_MSG_KEX_DH_GEX_INIT            32
-  NULL,                                    // SSH2_MSG_KEX_DH_GEX_REPLY           33
-  NULL,                                    // SSH2_MSG_KEX_DH_GEX_REQUEST         34
+#if WITH_SERVER
+  ssh_packet_kexdh_gex_init,               // SSH2_MSG_KEX_DH_GEX_INIT            32
+#else
+  NULL,
+#endif
+  ssh_packet_dh_gex_reply,                 // SSH2_MSG_KEX_DH_GEX_REPLY           33
+#if WITH_SERVER
+  ssh_packet_kexdh_gex_request,            // SSH2_MSG_KEX_DH_GEX_REQUEST         34
+#else
+  NULL,
+#endif
   NULL, NULL, NULL, NULL, NULL, NULL,	NULL,
   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
   NULL,                                    //                                     35-49
