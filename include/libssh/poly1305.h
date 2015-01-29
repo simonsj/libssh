@@ -13,8 +13,11 @@
 
 void poly1305_auth(u_char out[POLY1305_TAGLEN], const u_char *m, size_t inlen,
     const u_char key[POLY1305_KEYLEN])
+#ifdef HAVE_GCC_BOUNDED_ATTRIBUTE
     __attribute__((__bounded__(__minbytes__, 1, POLY1305_TAGLEN)))
     __attribute__((__bounded__(__buffer__, 2, 3)))
-    __attribute__((__bounded__(__minbytes__, 4, POLY1305_KEYLEN)));
+    __attribute__((__bounded__(__minbytes__, 4, POLY1305_KEYLEN)))
+#endif
+    ;
 
 #endif	/* POLY1305_H */
