@@ -9,6 +9,7 @@ Public domain.
 #ifndef CHACHA_H
 #define CHACHA_H
 
+#include "config.h"
 #include <sys/types.h>
 
 struct chacha_ctx {
@@ -22,13 +23,22 @@ struct chacha_ctx {
 #define CHACHA_BLOCKLEN   64
 
 void chacha_keysetup(struct chacha_ctx *x, const u_char *k, u_int kbits)
-    __attribute__((__bounded__(__minbytes__, 2, CHACHA_MINKEYLEN)));
+#ifdef HAVE_GCC_BOUNDED_ATTRIBUTE
+    __attribute__((__bounded__(__minbytes__, 2, CHACHA_MINKEYLEN)))
+#endif
+    ;
 void chacha_ivsetup(struct chacha_ctx *x, const u_char *iv, const u_char *ctr)
+#ifdef HAVE_GCC_BOUNDED_ATTRIBUTE
     __attribute__((__bounded__(__minbytes__, 2, CHACHA_NONCELEN)))
-    __attribute__((__bounded__(__minbytes__, 3, CHACHA_CTRLEN)));
+    __attribute__((__bounded__(__minbytes__, 3, CHACHA_CTRLEN)))
+#endif
+    ;
 void chacha_encrypt_bytes(struct chacha_ctx *x, const u_char *m,
     u_char *c, u_int bytes)
+#ifdef HAVE_GCC_BOUNDED_ATTRIBUTE
     __attribute__((__bounded__(__buffer__, 2, 4)))
-    __attribute__((__bounded__(__buffer__, 3, 4)));
+    __attribute__((__bounded__(__buffer__, 3, 4)))
+#endif
+    ;
 
 #endif    /* CHACHA_H */
