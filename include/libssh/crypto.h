@@ -104,6 +104,7 @@ struct ssh_crypto_struct {
 struct ssh_cipher_struct {
     const char *name; /* ssh name of the algorithm */
     unsigned int blocksize; /* blocksize of the algo */
+    unsigned int lenfield_blocksize; /* blocksize of the packet length field */
     unsigned int keylen; /* length of the key structure */
 #ifdef HAVE_LIBGCRYPT
     gcry_cipher_hd_t *key;
@@ -111,7 +112,9 @@ struct ssh_cipher_struct {
     void *key; /* a key buffer allocated for the algo */
     void *IV;
 #endif
+    struct chacha20_poly1305_keysched *chacha20_schedule;
     unsigned int keysize; /* bytes of key used. != keylen */
+    size_t tag_size; /* overhead required for tag */
     /* sets the new key for immediate use */
     int (*set_encrypt_key)(struct ssh_cipher_struct *cipher, void *key, void *IV);
     int (*set_decrypt_key)(struct ssh_cipher_struct *cipher, void *key, void *IV);
@@ -119,6 +122,8 @@ struct ssh_cipher_struct {
         unsigned long len);
     void (*decrypt)(struct ssh_cipher_struct *cipher, void *in, void *out,
         unsigned long len);
+    void (*aead_encrypt)(struct ssh_cipher_struct *cipher, void *in, void *out,
+            size_t len, uint8_t *mac, uint64_t seq);
 };
 
 /* vim: set ts=2 sw=2 et cindent: */

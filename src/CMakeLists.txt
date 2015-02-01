@@ -111,6 +111,7 @@ set(libssh_SRCS
   bignum.c
   buffer.c
   callbacks.c
+  chachapoly.c
   channels.c
   client.c
   config.c

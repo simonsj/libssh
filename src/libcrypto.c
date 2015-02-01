@@ -63,6 +63,7 @@
 
 #include "libssh/crypto.h"
 
+extern const struct ssh_cipher_struct chacha20poly1305_cipher;
 struct ssh_mac_ctx_struct {
   enum ssh_mac_e mac_type;
   union {
@@ -668,10 +669,22 @@ static struct ssh_cipher_struct ssh_ciphertab[] = {
   },
 #endif /* HAS_DES */
   {
+    .name = "chacha20-poly1305@openssh.com"
+  },
+  {
     .name = NULL,
   }
 };
 
+void libcrypto_init(void){
+    int i;
+    for (i=0; ssh_ciphertab[i].name != NULL; ++i){
+        if(strcmp(ssh_ciphertab[i].name, "chacha20-poly1305@openssh.com") == 0){
+            memcpy(&ssh_ciphertab[i], &chacha20poly1305_cipher, sizeof(struct ssh_cipher_struct));
+            break;
+        }
+    }
+}
 
 struct ssh_cipher_struct *ssh_get_ciphertab(void)
 {

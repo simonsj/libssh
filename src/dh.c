@@ -68,6 +68,7 @@
 #include <openssl/rand.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include "libssh/libcrypto.h"
 #endif
 
 static unsigned char p_group1_value[] = {
@@ -199,7 +200,7 @@ int ssh_crypto_init(void) {
     bignum_bin2bn(p_group14_value, P_GROUP14_LEN, p_group14);
 
     OpenSSL_add_all_algorithms();
-
+    libcrypto_init();
 #endif
 
     ssh_crypto_initialized = 1;
