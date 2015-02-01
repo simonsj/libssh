@@ -179,6 +179,7 @@ int ssh_crypto_init(void) {
       p_group1 = NULL;
       return -1;
     }
+    libgcrypt_init();
 
 #elif defined HAVE_LIBCRYPTO
     p_group1 = bignum_new();

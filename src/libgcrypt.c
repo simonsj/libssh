@@ -31,6 +31,8 @@
 #ifdef HAVE_LIBGCRYPT
 #include <gcrypt.h>
 
+extern const struct ssh_cipher_struct chacha20poly1305_cipher;
+
 struct ssh_mac_ctx_struct {
   enum ssh_mac_e mac_type;
   gcry_md_hd_t ctx;
@@ -581,6 +583,9 @@ static struct ssh_cipher_struct ssh_ciphertab[] = {
     .decrypt     = des1_1_decrypt
   },
   {
+    .name = "chacha20-poly1305@openssh.com"
+  },
+  {
     .name            = NULL,
     .blocksize       = 0,
     .keylen          = 0,
@@ -592,6 +597,16 @@ static struct ssh_cipher_struct ssh_ciphertab[] = {
     .decrypt     = NULL
   }
 };
+
+void libgcrypt_init(void){
+    int i;
+    for (i=0; ssh_ciphertab[i].name != NULL; ++i){
+        if(strcmp(ssh_ciphertab[i].name, "chacha20-poly1305@openssh.com") == 0){
+            memcpy(&ssh_ciphertab[i], &chacha20poly1305_cipher, sizeof(struct ssh_cipher_struct));
+            break;
+        }
+    }
+}
 
 struct ssh_cipher_struct *ssh_get_ciphertab(void)
 {

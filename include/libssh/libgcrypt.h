@@ -73,6 +73,7 @@ char *my_gcry_bn2dec(bignum bn);
 
 #endif /* HAVE_LIBGCRYPT */
 
+void libgcrypt_init(void);
 struct ssh_cipher_struct *ssh_get_ciphertab(void);
 
 #endif /* LIBGCRYPT_H_ */
