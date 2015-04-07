@@ -243,7 +243,7 @@ static int torture_pkd_setup_ecdsa_521(void **state) {
     f(client, ecdsa_521_blowfish_cbc,  ciphercmd("blowfish-cbc"),  setup_ecdsa_521,  teardown) \
     f(client, ecdsa_521_chacha20,      ciphercmd(CHACHA20),        setup_ecdsa_521,  teardown)
 
-#define PKDTESTS_CIPHER_AES192(f, client, ciphercmd) \
+#define PKDTESTS_CIPHER_OPENSSHONLY(f, client, ciphercmd) \
     /* Ciphers. */ \
     f(client, rsa_aes192_cbc,          ciphercmd("aes192-cbc"),    setup_rsa,        teardown) \
     f(client, rsa_aes192_ctr,          ciphercmd("aes192-ctr"),    setup_rsa,        teardown) \
@@ -323,7 +323,7 @@ static void torture_pkd_runtest(const char *testname,
 PKDTESTS_DEFAULT(emit_keytest, openssh_dsa, OPENSSH_CMD)
 PKDTESTS_KEX(emit_keytest, openssh_dsa, OPENSSH_KEX_CMD)
 PKDTESTS_CIPHER(emit_keytest, openssh_dsa, OPENSSH_CIPHER_CMD)
-PKDTESTS_CIPHER_AES192(emit_keytest, openssh_dsa, OPENSSH_CIPHER_CMD)
+PKDTESTS_CIPHER_OPENSSHONLY(emit_keytest, openssh_dsa, OPENSSH_CIPHER_CMD)
 PKDTESTS_MAC(emit_keytest, openssh_dsa, OPENSSH_MAC_CMD)
 #undef CLIENT_ID_FILE
 
@@ -331,7 +331,7 @@ PKDTESTS_MAC(emit_keytest, openssh_dsa, OPENSSH_MAC_CMD)
 PKDTESTS_DEFAULT(emit_keytest, openssh_rsa, OPENSSH_CMD)
 PKDTESTS_KEX(emit_keytest, openssh_rsa, OPENSSH_KEX_CMD)
 PKDTESTS_CIPHER(emit_keytest, openssh_rsa, OPENSSH_CIPHER_CMD)
-PKDTESTS_CIPHER_AES192(emit_keytest, openssh_rsa, OPENSSH_CIPHER_CMD)
+PKDTESTS_CIPHER_OPENSSHONLY(emit_keytest, openssh_rsa, OPENSSH_CIPHER_CMD)
 PKDTESTS_MAC(emit_keytest, openssh_rsa, OPENSSH_MAC_CMD)
 #undef CLIENT_ID_FILE
 
@@ -339,7 +339,7 @@ PKDTESTS_MAC(emit_keytest, openssh_rsa, OPENSSH_MAC_CMD)
 PKDTESTS_DEFAULT(emit_keytest, openssh_e256, OPENSSH_CMD)
 PKDTESTS_KEX(emit_keytest, openssh_e256, OPENSSH_KEX_CMD)
 PKDTESTS_CIPHER(emit_keytest, openssh_e256, OPENSSH_CIPHER_CMD)
-PKDTESTS_CIPHER_AES192(emit_keytest, openssh_e256, OPENSSH_CIPHER_CMD)
+PKDTESTS_CIPHER_OPENSSHONLY(emit_keytest, openssh_e256, OPENSSH_CIPHER_CMD)
 PKDTESTS_MAC(emit_keytest, openssh_e256, OPENSSH_MAC_CMD)
 #undef CLIENT_ID_FILE
 
@@ -351,7 +351,7 @@ PKDTESTS_MAC(emit_keytest, openssh_e256, OPENSSH_MAC_CMD)
 PKDTESTS_DEFAULT(emit_keytest, openssh_ed, OPENSSH_CMD)
 PKDTESTS_KEX(emit_keytest, openssh_ed, OPENSSH_KEX_CMD)
 PKDTESTS_CIPHER(emit_keytest, openssh_ed, OPENSSH_CIPHER_CMD)
-PKDTESTS_CIPHER_AES192(emit_keytest, openssh_ed, OPENSSH_CIPHER_CMD)
+PKDTESTS_CIPHER_OPENSSHONLY(emit_keytest, openssh_ed, OPENSSH_CIPHER_CMD)
 PKDTESTS_MAC(emit_keytest, openssh_ed, OPENSSH_MAC_CMD)
 #undef CLIENT_ID_FILE
 
@@ -387,25 +387,25 @@ struct {
     PKDTESTS_DEFAULT(emit_testmap, openssh_dsa, OPENSSH_CMD)
     PKDTESTS_KEX(emit_testmap, openssh_dsa, OPENSSH_KEX_CMD)
     PKDTESTS_CIPHER(emit_testmap, openssh_dsa, OPENSSH_CIPHER_CMD)
-    PKDTESTS_CIPHER_AES192(emit_testmap, openssh_dsa, OPENSSH_CIPHER_CMD)
+    PKDTESTS_CIPHER_OPENSSHONLY(emit_testmap, openssh_dsa, OPENSSH_CIPHER_CMD)
     PKDTESTS_MAC(emit_testmap, openssh_dsa, OPENSSH_MAC_CMD)
 
     PKDTESTS_DEFAULT(emit_testmap, openssh_rsa, OPENSSH_CMD)
     PKDTESTS_KEX(emit_testmap, openssh_rsa, OPENSSH_KEX_CMD)
     PKDTESTS_CIPHER(emit_testmap, openssh_rsa, OPENSSH_CIPHER_CMD)
-    PKDTESTS_CIPHER_AES192(emit_testmap, openssh_rsa, OPENSSH_CIPHER_CMD)
+    PKDTESTS_CIPHER_OPENSSHONLY(emit_testmap, openssh_rsa, OPENSSH_CIPHER_CMD)
     PKDTESTS_MAC(emit_testmap, openssh_rsa, OPENSSH_MAC_CMD)
 
     PKDTESTS_DEFAULT(emit_testmap, openssh_e256, OPENSSH_CMD)
     PKDTESTS_KEX(emit_testmap, openssh_e256, OPENSSH_KEX_CMD)
     PKDTESTS_CIPHER(emit_testmap, openssh_e256, OPENSSH_CIPHER_CMD)
-    PKDTESTS_CIPHER_AES192(emit_testmap, openssh_e256, OPENSSH_CIPHER_CMD)
+    PKDTESTS_CIPHER_OPENSSHONLY(emit_testmap, openssh_e256, OPENSSH_CIPHER_CMD)
     PKDTESTS_MAC(emit_testmap, openssh_e256, OPENSSH_MAC_CMD)
 
     PKDTESTS_DEFAULT(emit_testmap, openssh_ed, OPENSSH_CMD)
     PKDTESTS_KEX(emit_testmap, openssh_ed, OPENSSH_KEX_CMD)
     PKDTESTS_CIPHER(emit_testmap, openssh_ed, OPENSSH_CIPHER_CMD)
-    PKDTESTS_CIPHER_AES192(emit_testmap, openssh_ed, OPENSSH_CIPHER_CMD)
+    PKDTESTS_CIPHER_OPENSSHONLY(emit_testmap, openssh_ed, OPENSSH_CIPHER_CMD)
     PKDTESTS_MAC(emit_testmap, openssh_ed, OPENSSH_MAC_CMD)
 
     /* Dropbear */
@@ -429,25 +429,25 @@ static int pkd_run_tests(void) {
         PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_dsa, OPENSSH_CMD)
         PKDTESTS_KEX(emit_unit_test_comma, openssh_dsa, OPENSSH_KEX_CMD)
         PKDTESTS_CIPHER(emit_unit_test_comma, openssh_dsa, OPENSSH_CIPHER_CMD)
-        PKDTESTS_CIPHER_AES192(emit_unit_test_comma, openssh_dsa, OPENSSH_CIPHER_CMD)
+        PKDTESTS_CIPHER_OPENSSHONLY(emit_unit_test_comma, openssh_dsa, OPENSSH_CIPHER_CMD)
         PKDTESTS_MAC(emit_unit_test_comma, openssh_dsa, OPENSSH_MAC_CMD)
 
         PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_rsa, OPENSSH_CMD)
         PKDTESTS_KEX(emit_unit_test_comma, openssh_rsa, OPENSSH_KEX_CMD)
         PKDTESTS_CIPHER(emit_unit_test_comma, openssh_rsa, OPENSSH_CIPHER_CMD)
-        PKDTESTS_CIPHER_AES192(emit_unit_test_comma, openssh_rsa, OPENSSH_CIPHER_CMD)
+        PKDTESTS_CIPHER_OPENSSHONLY(emit_unit_test_comma, openssh_rsa, OPENSSH_CIPHER_CMD)
         PKDTESTS_MAC(emit_unit_test_comma, openssh_rsa, OPENSSH_MAC_CMD)
 
         PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_e256, OPENSSH_CMD)
         PKDTESTS_KEX(emit_unit_test_comma, openssh_e256, OPENSSH_KEX_CMD)
         PKDTESTS_CIPHER(emit_unit_test_comma, openssh_e256, OPENSSH_CIPHER_CMD)
-        PKDTESTS_CIPHER_AES192(emit_unit_test_comma, openssh_e256, OPENSSH_CIPHER_CMD)
+        PKDTESTS_CIPHER_OPENSSHONLY(emit_unit_test_comma, openssh_e256, OPENSSH_CIPHER_CMD)
         PKDTESTS_MAC(emit_unit_test_comma, openssh_e256, OPENSSH_MAC_CMD)
 
         PKDTESTS_DEFAULT(emit_unit_test_comma, openssh_ed, OPENSSH_CMD)
         PKDTESTS_KEX(emit_unit_test_comma, openssh_ed, OPENSSH_KEX_CMD)
         PKDTESTS_CIPHER(emit_unit_test_comma, openssh_ed, OPENSSH_CIPHER_CMD)
-        PKDTESTS_CIPHER_AES192(emit_unit_test_comma, openssh_ed, OPENSSH_CIPHER_CMD)
+        PKDTESTS_CIPHER_OPENSSHONLY(emit_unit_test_comma, openssh_ed, OPENSSH_CIPHER_CMD)
         PKDTESTS_MAC(emit_unit_test_comma, openssh_ed, OPENSSH_MAC_CMD)
     };
 
