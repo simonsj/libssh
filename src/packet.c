@@ -165,7 +165,12 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
     if (session->session_state == SSH_SESSION_STATE_ERROR) {
         goto error;
     }
-
+#ifdef DEBUG_PACKET
+    SSH_LOG(SSH_LOG_PACKET, "rcv packet cb (len=%u, state=%s)", (unsigned)receivedlen,
+            session->packet_state==PACKET_STATE_INIT?"INIT":
+            session->packet_state==PACKET_STATE_SIZEREAD?"SIZE_READ":
+            session->packet_state==PACKET_STATE_PROCESSING?"PROCESSING":"unknown");
+#endif
     switch(session->packet_state) {
         case PACKET_STATE_INIT:
             if (receivedlen < blocksize) {
@@ -173,6 +178,9 @@ int ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
                  * We didn't receive enough data to read at least one
                  * block size, give up
                  */
+#ifdef DEBUG_PACKET
+                SSH_LOG(SSH_LOG_PACKET, "Waiting for more data (%u < %u)", (unsigned)receivedlen, (unsigned)blocksize);
+#endif
                 return 0;
             }
 
