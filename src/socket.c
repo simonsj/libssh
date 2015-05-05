@@ -259,9 +259,19 @@ int ssh_socket_pollcallback(struct ssh_poll_handle_struct *p, socket_t fd,
             }
             s->last_errno = err;
             ssh_socket_close(s);
+            s->state = SSH_SOCKET_ERROR; /* ssh_socket_close clubs s->state */
             if (s->callbacks && s->callbacks->connected) {
                 s->callbacks->connected(SSH_SOCKET_CONNECTED_ERROR, err,
                                         s->callbacks->userdata);
+
+            /*
+             * s->callbacks->connected is not set for server mode,
+             * but the exception callback is.  Invoke that here.
+             */
+            } else if (s->callbacks && s->callbacks->exception) {
+                s->callbacks->exception((revents & POLLHUP) ? SSH_SOCKET_EXCEPTION_EOF
+                                                            : SSH_SOCKET_EXCEPTION_ERROR,
+                                        s->last_errno, s->callbacks->userdata);
             }
             return -1;
         }
