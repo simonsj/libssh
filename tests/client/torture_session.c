@@ -33,7 +33,8 @@ static void setup(void **state) {
     int verbosity = torture_libssh_verbosity();
     ssh_session session = ssh_new();
 
-    ssh_options_set(session, SSH_OPTIONS_HOST, "localhost");
+    ssh_options_set(session, SSH_OPTIONS_HOST, torture_libssh_host());
+    ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 
     *state = session;
@@ -46,7 +47,7 @@ static void teardown(void **state) {
 
 static void torture_channel_read_error(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
+    const char *user = torture_libssh_user();
     ssh_channel channel;
     int rc;
     int i;

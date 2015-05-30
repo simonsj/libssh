@@ -220,6 +220,10 @@ static const char torture_ed25519_testkey_pp[]=
         "-----END OPENSSH PRIVATE KEY-----\n";
 
 static int verbosity = 0;
+static const char *libssh_host="localhost";
+static const char *libssh_user=NULL;
+static const char *libssh_port="22";
+static const char *libssh_password=NULL;
 static const char *pattern = NULL;
 
 #ifndef _WIN32
@@ -339,7 +343,7 @@ int torture_isdir(const char *path) {
 }
 
 ssh_session torture_ssh_session(const char *host,
-                                const unsigned int *port,
+                                const char *port,
                                 const char *user,
                                 const char *password) {
     ssh_session session;
@@ -365,7 +369,7 @@ ssh_session torture_ssh_session(const char *host,
     }
 
     if (port != NULL) {
-      if (ssh_options_set(session, SSH_OPTIONS_PORT, port) < 0) {
+      if (ssh_options_set(session, SSH_OPTIONS_PORT_STR, port) < 0) {
         goto failed;
       }
     }
@@ -425,7 +429,7 @@ failed:
 #ifdef WITH_SERVER
 
 ssh_bind torture_ssh_bind(const char *addr,
-                          const unsigned int port,
+                          const char *port,
                           enum ssh_keytypes_e key_type,
                           const char *private_key_file) {
     int rc;
@@ -442,7 +446,7 @@ ssh_bind torture_ssh_bind(const char *addr,
         goto out_free;
     }
 
-    rc = ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT, &port);
+    rc = ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT_STR, &port);
     if (rc != 0) {
         goto out_free;
     }
@@ -651,6 +655,21 @@ int torture_libssh_verbosity(void){
   return verbosity;
 }
 
+const char *torture_libssh_host(void){
+  return libssh_host;
+}
+
+const char *torture_libssh_user(void){
+  return libssh_user;
+}
+const char *torture_libssh_port(void){
+  return libssh_port;
+}
+
+const char *torture_libssh_password(void){
+  return libssh_password;
+}
+
 void _torture_filter_tests(UnitTest *tests, size_t ntests){
     size_t i,j;
     const char *name, *last_name=NULL;
@@ -687,12 +706,29 @@ void _torture_filter_tests(UnitTest *tests, size_t ntests){
 
 int main(int argc, char **argv) {
   struct argument_s arguments;
-
+  char *tmp;
   arguments.verbose=0;
   arguments.pattern=NULL;
   torture_cmdline_parse(argc, argv, &arguments);
   verbosity=arguments.verbose;
+
   pattern=arguments.pattern;
+  tmp = getenv("TORTURE_HOST");
+  if (tmp != NULL){
+    libssh_host = tmp;
+  }
+  tmp = getenv("TORTURE_PORT");
+  if (tmp != NULL){
+    libssh_port = tmp;
+  }
+  tmp = getenv("TORTURE_USER");
+  if (tmp != NULL){
+    libssh_user = tmp;
+  }
+  tmp = getenv("TORTURE_PASSWORD");
+  if (tmp != NULL){
+    libssh_password = tmp;
+  }
 
   return torture_run_tests();
 }

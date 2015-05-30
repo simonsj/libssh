@@ -9,7 +9,7 @@
 #include <libssh/libssh.h>
 #include "torture.h"
 
-#define TEST_SERVER_PORT 2222
+#define TEST_SERVER_PORT "2222"
 
 struct hostkey_state {
     const char *hostkey;
@@ -54,7 +54,7 @@ static void teardown(void **state) {
 static const uint32_t x11_screen_number = 1;
 
 static void *client_thread(void *arg) {
-    unsigned int test_port = TEST_SERVER_PORT;
+    const char *test_port = TEST_SERVER_PORT;
     int rc;
     ssh_session session;
     ssh_channel channel;
@@ -63,7 +63,7 @@ static void *client_thread(void *arg) {
     (void)arg;
 
     session = torture_ssh_session("localhost",
-                                  &test_port,
+                                  test_port,
                                   "foo", "bar");
     assert_non_null(session);
 

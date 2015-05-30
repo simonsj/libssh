@@ -28,7 +28,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#define HOST "localhost"
+
 /* Should work until Apnic decides to assign it :) */
 #define BLACKHOLE "1.1.1.1"
 
@@ -52,8 +52,11 @@ static void torture_connect_nonblocking(void **state) {
 
     int rc;
 
-    rc = ssh_options_set(session, SSH_OPTIONS_HOST, HOST);
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, torture_libssh_host());
     assert_true(rc == SSH_OK);
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
+    assert_true(rc == SSH_OK);
+
     ssh_set_blocking(session,0);
 
     do {
@@ -96,7 +99,9 @@ static void torture_connect_double(void **state) {
 
     int rc;
 
-    rc = ssh_options_set(session, SSH_OPTIONS_HOST, HOST);
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, torture_libssh_host());
+    assert_true(rc == SSH_OK);
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     assert_true(rc == SSH_OK);
     rc = ssh_connect(session);
     assert_true(rc == SSH_OK);

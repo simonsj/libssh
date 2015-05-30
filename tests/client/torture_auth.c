@@ -31,7 +31,8 @@ static void setup(void **state) {
     int verbosity = torture_libssh_verbosity();
     ssh_session session = ssh_new();
 
-    ssh_options_set(session, SSH_OPTIONS_HOST, "localhost");
+    ssh_options_set(session, SSH_OPTIONS_HOST, torture_libssh_host());
+    ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 
     *state = session;
@@ -44,7 +45,7 @@ static void teardown(void **state) {
 
 static void torture_auth_autopubkey(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
+    const char *user = torture_libssh_user();
     int rc;
 
     if (user == NULL) {
@@ -73,7 +74,7 @@ static void torture_auth_autopubkey(void **state) {
 
 static void torture_auth_autopubkey_nonblocking(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
+    const char *user = torture_libssh_user();
     int rc;
 
     if (user == NULL) {
@@ -109,8 +110,8 @@ static void torture_auth_autopubkey_nonblocking(void **state) {
 
 static void torture_auth_kbdint(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
-    char *password = getenv("TORTURE_PASSWORD");
+    const char *user = torture_libssh_user();
+    const char *password = torture_libssh_password();
     int rc;
 
     if (user == NULL) {
@@ -157,8 +158,8 @@ static void torture_auth_kbdint(void **state) {
 
 static void torture_auth_kbdint_nonblocking(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
-    char *password = getenv("TORTURE_PASSWORD");
+    const char *user = torture_libssh_user();
+    const char *password = torture_libssh_password();
     int rc;
 
     if (user == NULL) {
@@ -216,8 +217,8 @@ static void torture_auth_kbdint_nonblocking(void **state) {
 
 static void torture_auth_password(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
-    char *password = getenv("TORTURE_PASSWORD");
+    const char *user = torture_libssh_user();
+    const char *password = torture_libssh_password();
     int rc;
 
     if (user == NULL) {
@@ -252,8 +253,8 @@ static void torture_auth_password(void **state) {
 
 static void torture_auth_password_nonblocking(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
-    char *password = getenv("TORTURE_PASSWORD");
+    const char *user = torture_libssh_user();
+    const char *password = torture_libssh_password();
     int rc;
 
     if (user == NULL) {
@@ -296,7 +297,7 @@ static void torture_auth_password_nonblocking(void **state) {
 
 static void torture_auth_agent(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
+    const char *user = torture_libssh_user();
     int rc;
 
     if (user == NULL) {
@@ -328,7 +329,7 @@ static void torture_auth_agent(void **state) {
 
 static void torture_auth_agent_nonblocking(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
+    const char *user = torture_libssh_user();
     int rc;
 
     if (user == NULL) {
@@ -365,7 +366,7 @@ static void torture_auth_agent_nonblocking(void **state) {
 
 static void torture_auth_none(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
+    const char *user = torture_libssh_user();
     int rc;
 
     if (user == NULL) {
@@ -390,7 +391,7 @@ static void torture_auth_none(void **state) {
 
 static void torture_auth_none_nonblocking(void **state) {
     ssh_session session = *state;
-    char *user = getenv("TORTURE_USER");
+    const char *user = torture_libssh_user();
     int rc;
 
     if (user == NULL) {

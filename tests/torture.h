@@ -69,14 +69,18 @@ int torture_isdir(const char *path);
  * Returns the verbosity level asked by user
  */
 int torture_libssh_verbosity(void);
+const char *torture_libssh_host(void);
+const char *torture_libssh_user(void);
+const char *torture_libssh_port(void);
+const char *torture_libssh_password(void);
 
 ssh_session torture_ssh_session(const char *host,
-                                const unsigned int *port,
+                                const char *port,
                                 const char *user,
                                 const char *password);
 
 ssh_bind torture_ssh_bind(const char *addr,
-                          const unsigned int port,
+                          const char *port,
                           enum ssh_keytypes_e key_type,
                           const char *private_key_file);
 

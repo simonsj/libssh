@@ -40,7 +40,10 @@ static void teardown(void **state) {
 static void test_algorithm(ssh_session session, const char *algo, const char *hmac) {
     int rc;
 
-    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "localhost");
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, torture_libssh_host());
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     assert_true(rc == SSH_OK);
 
     rc = ssh_options_set(session, SSH_OPTIONS_CIPHERS_C_S, algo);
@@ -173,7 +176,10 @@ static void torture_algorithms_zlib(void **state) {
     ssh_session session = *state;
     int rc;
 
-    rc = ssh_options_set(session,SSH_OPTIONS_HOST,"localhost");
+    rc = ssh_options_set(session,SSH_OPTIONS_HOST, torture_libssh_host());
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     assert_true(rc == SSH_OK);
 
     rc = ssh_options_set(session, SSH_OPTIONS_COMPRESSION_C_S, "zlib");
@@ -213,7 +219,10 @@ static void torture_algorithms_zlib_openssh(void **state) {
     ssh_session session = *state;
     int rc;
 
-    rc = ssh_options_set(session,SSH_OPTIONS_HOST,"localhost");
+    rc = ssh_options_set(session,SSH_OPTIONS_HOST, torture_libssh_host());
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     assert_true(rc == SSH_OK);
 
     rc = ssh_options_set(session, SSH_OPTIONS_COMPRESSION_C_S, "zlib@openssh.com");
@@ -255,7 +264,10 @@ static void torture_algorithms_ecdh_sha2_nistp256(void **state) {
     ssh_session session = *state;
     int rc;
 
-    rc = ssh_options_set(session,SSH_OPTIONS_HOST,"localhost");
+    rc = ssh_options_set(session,SSH_OPTIONS_HOST, torture_libssh_host());
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     assert_true(rc == SSH_OK);
 
     rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, "ecdh-sha2-nistp256");
@@ -277,7 +289,10 @@ static void torture_algorithms_dh_group1(void **state) {
     ssh_session session = *state;
     int rc;
 
-    rc = ssh_options_set(session,SSH_OPTIONS_HOST,"localhost");
+    rc = ssh_options_set(session,SSH_OPTIONS_HOST, torture_libssh_host());
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_PORT_STR, torture_libssh_port());
     assert_true(rc == SSH_OK);
 
     rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, "diffie-hellman-group1-sha1");

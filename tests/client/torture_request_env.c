@@ -27,21 +27,11 @@
 static void setup(void **state)
 {
     ssh_session session;
-    const char *host;
-    const char *user;
-    const char *password;
 
-    host = getenv("TORTURE_HOST");
-    if (host == NULL) {
-        host = "localhost";
-    }
+    session = torture_ssh_session(torture_libssh_host(), torture_libssh_port(),
+            torture_libssh_user(), torture_libssh_password());
 
-    user = getenv("TORTURE_USER");
-    password = getenv("TORTURE_PASSWORD");
-
-    session = torture_ssh_session(host, NULL, user, password);
-
-    assert_false(session == NULL);
+    assert_non_null(session);
     *state = session;
 }
 
