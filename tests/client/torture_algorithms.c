@@ -24,6 +24,7 @@
 #include "torture.h"
 #include "libssh/libssh.h"
 #include "libssh/priv.h"
+#include "libssh/session.h"
 
 #include <errno.h>
 #include <sys/types.h>
@@ -47,6 +48,10 @@ static int session_setup(void **state) {
     int verbosity = torture_libssh_verbosity();
     struct passwd *pwd;
     int rc;
+    char data[256];
+    size_t len_to_test[] = {1,2,3,4,5,6,7,8,10,12,15,16,20,31,32,33,63,64,65,
+            100,127,128};
+    unsigned int i;
 
     pwd = getpwnam("bob");
     assert_non_null(pwd);
@@ -96,6 +101,14 @@ static void test_algorithm(ssh_session session, const char *algo, const char *hm
 
     rc = ssh_connect(session);
     assert_int_equal(rc, SSH_OK);
+
+    /* send ignore packets of all sizes */
+    memset(data,0,sizeof(data));
+    for (i=0;i<(sizeof(len_to_test) / sizeof(size_t));++i){
+        memset(data,'A', len_to_test[i]);
+        ssh_send_ignore(session, data);
+        ssh_handle_packets(session, 50);
+    }
 
     rc = ssh_userauth_none(session, NULL);
     if (rc != SSH_OK) {
