@@ -471,19 +471,24 @@ static int pkd_run_tests(void) {
         rc = _run_tests(all_tests, tindex);
     } else {
         int i = 0;
-        const UnitTest *found = NULL;
+        int num_found = 0;
         const char *testname = pkd_dargs.opts.testname;
 
+        UnitTest matching_tests[sizeof(all_tests)];
+        memset(&matching_tests[0], 0x0, sizeof(matching_tests));
+
         while (testmap[i].testname != NULL) {
-            if (strcmp(testmap[i].testname, testname) == 0) {
-                found = &testmap[i].test[0];
+            if ((testname != NULL) &&
+                (strcmp(testmap[i].testname, testname) == 0)) {
+                memcpy(&matching_tests[0], &testmap[i].test[0], sizeof(UnitTest) * 3);
+                num_found += 1;
                 break;
             }
             i += 1;
         }
 
-        if (found != NULL) {
-            rc = _run_tests(found, 3);
+        if (num_found > 0) {
+            rc = _run_tests(matching_tests, num_found * 3);
         } else {
             fprintf(stderr, "Did not find test '%s'\n", testname);
         }
