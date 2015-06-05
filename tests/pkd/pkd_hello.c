@@ -36,6 +36,8 @@ static char doc[] = \
     "        List available individual test names.\n"
     "    " PROGNAME " -i 1000 -t torture_pkd_rsa_ecdh_sha2_nistp256\n"
     "        Run only the torture_pkd_rsa_ecdh_sha2_nistp256 testcase 1000 times.\n"
+    "    " PROGNAME " -i 1000 -m chacha\n"
+    "        Run all tests with the string 'chacha' 1000 times.\n"
     "    " PROGNAME " -v -v -v -v -e -o\n"
     "        Run all tests with maximum libssh and pkd logging.\n"
 ;
@@ -47,6 +49,8 @@ static struct argp_option options[] = {
       "List available individual test names", 0 },
     { "iterations", 'i', "number", 0,
       "Run each test for the given number of iterations (default is 10)", 0 },
+    { "match", 'm', "testmatch", 0,
+      "Run all tests with the given string", 0 },
     { "stdout", 'o', NULL, 0,
       "Emit pkd stdout messages", 0 },
     { "test", 't', "testname", 0,
@@ -70,6 +74,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         break;
     case 'i':
         pkd_dargs.opts.iterations = atoi(arg);
+        break;
+    case 'm':
+        pkd_dargs.opts.testmatch = arg;
         break;
     case 'o':
         pkd_dargs.opts.log_stdout = 1;
@@ -467,12 +474,14 @@ static int pkd_run_tests(void) {
     memcpy(&all_tests[tindex], &noop_tests[0], sizeof(noop_tests));
     tindex += (sizeof(noop_tests) / sizeof(noop_tests[0]));
 
-    if (pkd_dargs.opts.testname == NULL) {
+    if ((pkd_dargs.opts.testname == NULL) &&
+        (pkd_dargs.opts.testmatch == NULL)) {
         rc = _run_tests(all_tests, tindex);
     } else {
         int i = 0;
         int num_found = 0;
         const char *testname = pkd_dargs.opts.testname;
+        const char *testmatch = pkd_dargs.opts.testmatch;
 
         UnitTest matching_tests[sizeof(all_tests)];
         memset(&matching_tests[0], 0x0, sizeof(matching_tests));
@@ -480,10 +489,21 @@ static int pkd_run_tests(void) {
         while (testmap[i].testname != NULL) {
             if ((testname != NULL) &&
                 (strcmp(testmap[i].testname, testname) == 0)) {
-                memcpy(&matching_tests[0], &testmap[i].test[0], sizeof(UnitTest) * 3);
+                memcpy(&matching_tests[num_found * 3],
+                       &testmap[i].test[0],
+                       sizeof(UnitTest) * 3);
                 num_found += 1;
                 break;
             }
+
+            if ((testmatch != NULL) &&
+                (strstr(testmap[i].testname, testmatch) != NULL)) {
+                memcpy(&matching_tests[num_found * 3],
+                       &testmap[i].test[0],
+                       sizeof(UnitTest) * 3);
+                num_found += 1;
+            }
+
             i += 1;
         }
 
