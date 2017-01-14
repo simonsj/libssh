@@ -229,26 +229,17 @@ static struct ssh_server_callbacks_struct pkd_server_cb = {
     .channel_open_request_session_function = pkd_channel_openreq_cb,
 };
 
-static int pkd_exec_hello(int fd, struct pkd_daemon_args *args) {
+static ssh_bind pkd_bind_init(enum pkd_hostkey_type_e type,
+                              const char *hostkeypath,
+                              int log_level) {
     int rc = -1;
     ssh_bind b = NULL;
-    ssh_session s = NULL;
-    ssh_event e = NULL;
-    ssh_channel c = NULL;
     enum ssh_bind_options_e opts = -1;
-
-    int level = args->opts.libssh_log_level;
-    enum pkd_hostkey_type_e type = args->type;
-    const char *hostkeypath = args->hostkeypath;
-
-    pkd_state.eof_received = 0;
-    pkd_state.close_received  = 0;
-    pkd_state.req_exec_received = 0;
 
     b = ssh_bind_new();
     if (b == NULL) {
         pkderr("ssh_bind_new\n");
-        goto outclose;
+        goto out;
     }
 
     if (type == PKD_RSA) {
@@ -259,19 +250,43 @@ static int pkd_exec_hello(int fd, struct pkd_daemon_args *args) {
         opts = SSH_BIND_OPTIONS_ECDSAKEY;
     } else {
         pkderr("unknown kex algorithm: %d\n", type);
-        rc = -1;
-        goto outclose;
+        goto outfree;
     }
 
     rc = ssh_bind_options_set(b, opts, hostkeypath);
     if (rc != 0) {
         pkderr("ssh_bind_options_set: %s\n", ssh_get_error(b));
-        goto outclose;
+        goto outfree;
     }
 
-    rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_LOG_VERBOSITY, &level);
+    rc = ssh_bind_options_set(b, SSH_BIND_OPTIONS_LOG_VERBOSITY, &log_level);
     if (rc != 0) {
         pkderr("ssh_bind_options_set log verbosity: %s\n", ssh_get_error(b));
+        goto outfree;
+    }
+
+    goto out;
+outfree:
+    ssh_bind_free(b);
+    b = NULL;
+out:
+    return b;
+}
+
+static int pkd_exec_hello(int fd, struct pkd_daemon_args *args) {
+    int rc = -1;
+    ssh_bind b = NULL;
+    ssh_session s = NULL;
+    ssh_event e = NULL;
+    ssh_channel c = NULL;
+
+    pkd_state.eof_received = 0;
+    pkd_state.close_received  = 0;
+    pkd_state.req_exec_received = 0;
+
+    b = pkd_bind_init(args->type, args->hostkeypath, args->opts.libssh_log_level);
+    if (b == NULL) {
+        pkderr("pkd_bind_init\n");
         goto outclose;
     }
 
