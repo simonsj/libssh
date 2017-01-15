@@ -43,10 +43,12 @@ static char doc[] = \
 static struct argp_option options[] = {
     { "stderr", 'e', NULL, 0,
       "Emit pkd stderr messages", 0 },
-    { "list", 'l', NULL, 0,
-      "List available individual test names", 0 },
     { "iterations", 'i', "number", 0,
       "Run each test for the given number of iterations (default is 10)", 0 },
+    { "list", 'l', NULL, 0,
+      "List available individual test names", 0 },
+    { "memory", 'm', NULL, 0,
+      "Reuse server host keys from memory for iterations beyond the first", 0 },
     { "stdout", 'o', NULL, 0,
       "Emit pkd stdout messages", 0 },
     { "test", 't', "testname", 0,
@@ -65,11 +67,14 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     case 'e':
         pkd_dargs.opts.log_stderr = 1;
         break;
+    case 'i':
+        pkd_dargs.opts.iterations = atoi(arg);
+        break;
     case 'l':
         pkd_dargs.opts.list = 1;
         break;
-    case 'i':
-        pkd_dargs.opts.iterations = atoi(arg);
+    case 'm':
+        pkd_dargs.opts.reuse_hostkeys_from_memory = 1;
         break;
     case 'o':
         pkd_dargs.opts.log_stdout = 1;
