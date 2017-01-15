@@ -229,12 +229,17 @@ static struct ssh_server_callbacks_struct pkd_server_cb = {
     .channel_open_request_session_function = pkd_channel_openreq_cb,
 };
 
-static ssh_bind pkd_bind_init(enum pkd_hostkey_type_e type,
+static ssh_key hostkey_in_memory;
+
+static ssh_bind pkd_bind_init(unsigned int reuse_hostkeys_from_memory,
+                              enum pkd_hostkey_type_e type,
                               const char *hostkeypath,
                               int log_level) {
     int rc = -1;
     ssh_bind b = NULL;
     enum ssh_bind_options_e opts = -1;
+    const void *bind_opt_value = NULL;
+    ssh_key imported_key = NULL;
 
     b = ssh_bind_new();
     if (b == NULL) {
@@ -242,18 +247,42 @@ static ssh_bind pkd_bind_init(enum pkd_hostkey_type_e type,
         goto out;
     }
 
-    if (type == PKD_RSA) {
+    if (reuse_hostkeys_from_memory) {
+        if (!((type == PKD_RSA) || (type == PKD_DSA) || (type == PKD_ECDSA))) {
+            pkderr("unknown kex algorithm: %d\n", type);
+            goto outfree;
+        }
+
+        if (hostkey_in_memory == NULL) {
+            rc = ssh_pki_import_privkey_file(hostkeypath, NULL, NULL, NULL, &hostkey_in_memory);
+            if (rc != SSH_OK) {
+                pkderr("failed to import private key '%s'\n", hostkeypath);
+                goto outfree;
+            }
+        }
+        assert_non_null(hostkey_in_memory);
+        imported_key = ssh_key_dup(hostkey_in_memory);
+        if (imported_key == NULL) {
+            pkderr("failed to dup private key\n");
+            goto outfree;
+        }
+        opts = SSH_BIND_OPTIONS_IMPORT_KEY;
+        bind_opt_value = imported_key;
+    } else if (type == PKD_RSA) {
         opts = SSH_BIND_OPTIONS_RSAKEY;
+        bind_opt_value = hostkeypath;
     } else if (type == PKD_DSA) {
         opts = SSH_BIND_OPTIONS_DSAKEY;
+        bind_opt_value = hostkeypath;
     } else if (type == PKD_ECDSA) {
         opts = SSH_BIND_OPTIONS_ECDSAKEY;
+        bind_opt_value = hostkeypath;
     } else {
         pkderr("unknown kex algorithm: %d\n", type);
         goto outfree;
     }
 
-    rc = ssh_bind_options_set(b, opts, hostkeypath);
+    rc = ssh_bind_options_set(b, opts, bind_opt_value);
     if (rc != 0) {
         pkderr("ssh_bind_options_set: %s\n", ssh_get_error(b));
         goto outfree;
@@ -284,7 +313,10 @@ static int pkd_exec_hello(int fd, struct pkd_daemon_args *args) {
     pkd_state.close_received  = 0;
     pkd_state.req_exec_received = 0;
 
-    b = pkd_bind_init(args->type, args->hostkeypath, args->opts.libssh_log_level);
+    b = pkd_bind_init(args->opts.reuse_hostkeys_from_memory,
+                      args->type,
+                      args->hostkeypath,
+                      args->opts.libssh_log_level);
     if (b == NULL) {
         pkderr("pkd_bind_init\n");
         goto outclose;
@@ -509,6 +541,9 @@ void pkd_stop(struct pkd_result *out) {
 
     rc = pthread_join(ctx.tid, NULL);
     assert_int_equal(rc, 0);
+
+    ssh_key_free(hostkey_in_memory);
+    hostkey_in_memory = NULL;
 
     assert_non_null(out);
     out->ok = (ctx.rc == 0);

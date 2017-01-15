@@ -27,6 +27,7 @@ struct pkd_daemon_args {
 
         const char *testname;
         unsigned int iterations;
+        unsigned int reuse_hostkeys_from_memory;
     } opts;
 };
 
