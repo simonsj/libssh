@@ -361,7 +361,7 @@ PKDTESTS_MAC(emit_keytest, dropbear, DROPBEAR_MAC_CMD)
 
 #define emit_testmap(client, testname, sshcmd, setup, teardown) \
     { "torture_pkd_" #client "_" #testname,                     \
-      { emit_unit_test(client, testname, sshcmd, setup, teardown) } },
+      emit_unit_test(client, testname, sshcmd, setup, teardown) },
 
 #define emit_unit_test(client, testname, sshcmd, setup, teardown) \
     cmocka_unit_test_setup_teardown(torture_pkd_ ## client ## _ ## testname, \
@@ -373,7 +373,7 @@ PKDTESTS_MAC(emit_keytest, dropbear, DROPBEAR_MAC_CMD)
 
 struct {
     const char *testname;
-    const struct CMUnitTest test[3]; /* requires setup + test + teardown */
+    const struct CMUnitTest test;
 } testmap[] = {
     /* OpenSSH */
     PKDTESTS_DEFAULT(emit_testmap, openssh_dsa, OPENSSH_CMD)
@@ -409,8 +409,11 @@ struct {
     emit_testmap(client, noop, "", setup_noop, teardown)
 
     /* NULL tail entry */
-    { .testname = NULL, {
-        { .name = NULL, }, { .name = NULL }, { .name = NULL } } }
+    { .testname = NULL,
+      .test = { .name = NULL,
+                .test_func = NULL,
+                .setup_func = NULL,
+                .teardown_func = NULL } }
 };
 
 static int pkd_run_tests(void) {
@@ -455,8 +458,8 @@ static int pkd_run_tests(void) {
 
     /* Test list is populated depending on which clients are enabled. */
     struct CMUnitTest all_tests[(sizeof(openssh_tests) / sizeof(openssh_tests[0])) +
-                       (sizeof(dropbear_tests) / sizeof(dropbear_tests[0])) +
-                       (sizeof(noop_tests) / sizeof(noop_tests[0]))];
+                                (sizeof(dropbear_tests) / sizeof(dropbear_tests[0])) +
+                                (sizeof(noop_tests) / sizeof(noop_tests[0]))];
     memset(&all_tests[0], 0x0, sizeof(all_tests));
 
     /* Generate client keys and populate test list for each enabled client. */
@@ -484,14 +487,14 @@ static int pkd_run_tests(void) {
 
         while (testmap[i].testname != NULL) {
             if (strcmp(testmap[i].testname, testname) == 0) {
-                found = &testmap[i].test[0];
+                found = &testmap[i].test;
                 break;
             }
             i += 1;
         }
 
         if (found != NULL) {
-            rc = _cmocka_run_group_tests("found", found, 3, NULL, NULL);
+            rc = _cmocka_run_group_tests("found", found, 1, NULL, NULL);
         } else {
             fprintf(stderr, "Did not find test '%s'\n", testname);
         }
