@@ -482,19 +482,24 @@ static int pkd_run_tests(void) {
         rc = _cmocka_run_group_tests("all tests", all_tests, tindex, NULL, NULL);
     } else {
         int i = 0;
-        const struct CMUnitTest *found = NULL;
+        int num_found = 0;
         const char *testname = pkd_dargs.opts.testname;
 
+        struct CMUnitTest matching_tests[sizeof(all_tests)];
+        memset(&matching_tests[0], 0x0, sizeof(matching_tests));
+
         while (testmap[i].testname != NULL) {
-            if (strcmp(testmap[i].testname, testname) == 0) {
-                found = &testmap[i].test;
+            if ((testname != NULL) &&
+                (strcmp(testmap[i].testname, testname) == 0)) {
+                memcpy(&matching_tests[0], &testmap[i].test, sizeof(struct CMUnitTest));
+                num_found += 1;
                 break;
             }
             i += 1;
         }
 
-        if (found != NULL) {
-            rc = _cmocka_run_group_tests("found", found, 1, NULL, NULL);
+        if (num_found > 0) {
+            rc = _cmocka_run_group_tests("found", matching_tests, num_found, NULL, NULL);
         } else {
             fprintf(stderr, "Did not find test '%s'\n", testname);
         }
