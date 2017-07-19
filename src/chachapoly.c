@@ -143,6 +143,10 @@ static int chacha20_poly1305_aead_decrypt(struct ssh_cipher_struct *cipher,
     return SSH_OK;
 }
 
+static void chacha20_cleanup(struct ssh_cipher_struct *cipher) {
+    SAFE_FREE(cipher->chacha20_schedule);
+}
+
 const struct ssh_cipher_struct chacha20poly1305_cipher = {
     .name = "chacha20-poly1305@openssh.com",
     .blocksize = 8,
@@ -152,6 +156,7 @@ const struct ssh_cipher_struct chacha20poly1305_cipher = {
     .tag_size = POLY1305_TAGLEN,
     .set_encrypt_key = chacha20_set_encrypt_key,
     .set_decrypt_key = chacha20_set_encrypt_key,
+    .cleanup = chacha20_cleanup,
     .aead_encrypt = chacha20_poly1305_aead_encrypt,
     .aead_decrypt_length = chacha20_poly1305_aead_decrypt_length,
     .aead_decrypt = chacha20_poly1305_aead_decrypt
