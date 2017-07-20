@@ -139,6 +139,7 @@ static int server_set_kex(ssh_session session) {
         }
         server->methods[i] = strdup(wanted);
         if (server->methods[i] == NULL) {
+            ssh_set_error_oom(session);
             for (j = 0; j < i; j++) {
                 SAFE_FREE(server->methods[j]);
             }
