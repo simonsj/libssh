@@ -123,6 +123,7 @@ static int server_set_kex(ssh_session session) {
     }
 
     if (strlen(hostkeys) == 0) {
+        ssh_set_error(session, SSH_FATAL, "no host key available");
         return -1;
     }
 
