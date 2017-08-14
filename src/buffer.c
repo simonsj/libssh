@@ -903,9 +903,11 @@ int ssh_buffer_unpack_va(struct ssh_buffer_struct *buffer,
         uint64_t *qword;
         ssh_string *string;
         char **cstring;
+        bignum *bignum;
         void **data;
     } o;
     size_t len, rlen, max_len;
+    ssh_string tmp_string;
     va_list ap_copy;
     int count;
 
@@ -944,6 +946,18 @@ int ssh_buffer_unpack_va(struct ssh_buffer_struct *buffer,
             rlen = ssh_buffer_get_u64(buffer, o.qword);
             *o.qword = ntohll(*o.qword);
             rc = rlen==8 ? SSH_OK : SSH_ERROR;
+            break;
+        case 'B':
+            o.bignum = va_arg(ap, bignum *);
+            *o.bignum = NULL;
+            tmp_string = ssh_buffer_get_ssh_string(buffer);
+            if (tmp_string == NULL){
+                rc = SSH_ERROR;
+                break;
+            }
+            *o.bignum = ssh_make_string_bn(tmp_string);
+            ssh_string_free(tmp_string);
+            rc = (*o.bignum != NULL)? SSH_OK : SSH_ERROR;
             break;
         case 'S':
             o.string = va_arg(ap, ssh_string *);
@@ -1090,6 +1104,7 @@ int ssh_buffer_unpack_va(struct ssh_buffer_struct *buffer,
  *                         's': char ** (C string, pulled as SSH string)
  *                         'P': size_t, void ** (len of data, pointer to data)
  *                              only pulls data.
+ *                         'B': bignum * (pulled as SSH string)
  * @returns             SSH_OK on success
  *                      SSH_ERROR on error
  * @warning             when using 'P' with a constant size (e.g. 8), do not

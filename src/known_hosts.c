@@ -38,15 +38,6 @@
 /*todo: remove this include */
 #include "libssh/string.h"
 
-#ifdef HAVE_LIBGCRYPT
-#include <gcrypt.h>
-#elif defined HAVE_LIBCRYPTO
-#include <openssl/pem.h>
-#include <openssl/dsa.h>
-#include <openssl/err.h>
-#include <openssl/rsa.h>
-#endif /* HAVE_LIBCRYPTO */
-
 #ifndef _WIN32
 # include <netinet/in.h>
 # include <arpa/inet.h>
@@ -233,21 +224,17 @@ static int check_public_key(ssh_session session, char **tokens) {
       tmpstring = malloc(4 + len);
       if (tmpstring == NULL) {
         ssh_buffer_free(pubkey_buffer);
-        bignum_free(tmpbn);
+        bignum_safe_free(tmpbn);
         return -1;
       }
       /* TODO: fix the hardcoding */
       tmpstring->size = htonl(len);
-#ifdef HAVE_LIBGCRYPT
       bignum_bn2bin(tmpbn, len, ssh_string_data(tmpstring));
-#elif defined HAVE_LIBCRYPTO
-      bignum_bn2bin(tmpbn, ssh_string_data(tmpstring));
-#endif
-      bignum_free(tmpbn);
+      bignum_safe_free(tmpbn);
       if (ssh_buffer_add_ssh_string(pubkey_buffer, tmpstring) < 0) {
         ssh_buffer_free(pubkey_buffer);
         ssh_string_free(tmpstring);
-        bignum_free(tmpbn);
+        bignum_safe_free(tmpbn);
         return -1;
       }
       ssh_string_free(tmpstring);

@@ -37,15 +37,16 @@
 #define HAVE_ECDH 1
 #endif
 
+extern struct ssh_packet_callbacks_struct ssh_ecdh_client_callbacks;
+
 /* Common functions.  */
-int ssh_client_ecdh_reply(ssh_session session, ssh_buffer packet);
 
 /* Backend-specific functions.  */
 int ssh_client_ecdh_init(ssh_session session);
 int ecdh_build_k(ssh_session session);
 
 #ifdef WITH_SERVER
-int ssh_server_ecdh_init(ssh_session session, ssh_buffer packet);
+void ssh_server_ecdh_init(ssh_session session);
 #endif /* WITH_SERVER */
 
 #endif /* ECDH_H_ */

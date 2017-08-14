@@ -48,16 +48,25 @@
  * This function should only be called once, at the beginning of the program, in
  * the main thread. It may be omitted if your program is not multithreaded.
  *
- * @returns             0 on success, -1 if an error occured.
+ * @returns             SSH_OK on success, SSH_ERROR if an error occurred.
  */
 int ssh_init(void) {
-  if(ssh_threads_init())
-    return -1;
-  if(ssh_crypto_init())
-    return -1;
-  if(ssh_socket_init())
-    return -1;
-  return 0;
+    int rc = SSH_OK;
+    /* Continuing to execute through errors, because some users may
+     * ignore them until it's too late.
+     */
+    if(ssh_threads_init() != SSH_OK){
+        rc = SSH_ERROR;
+    }
+    if(ssh_crypto_init() != SSH_OK){
+        rc = SSH_ERROR;
+    }
+    if(ssh_dh_init() != SSH_OK){
+        rc = SSH_ERROR;
+    }
+    if(ssh_socket_init() != SSH_OK)
+        rc = SSH_ERROR;
+    return rc;
 }
 
 
@@ -66,12 +75,12 @@ int ssh_init(void) {
  *
  * This function should only be called once, at the end of the program!
  *
- * @returns             0 on succes, -1 if an error occured.
- *
-   @returns 0 otherwise
+ * @returns             SSH_OK on success, SSH_ERROR if an error occurred.
+ * @returns 0 otherwise
  */
 int ssh_finalize(void) {
   ssh_crypto_finalize();
+  ssh_dh_finalize();
   ssh_socket_cleanup();
   /* It is important to finalize threading after CRYPTO because
    * it still depends on it */

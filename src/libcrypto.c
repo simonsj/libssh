@@ -71,12 +71,68 @@ struct ssh_mac_ctx_struct {
   } ctx;
 };
 
+static int libcrypto_initialized = 0;
+/**
+ * @internal
+ * @brief Initialize libcrypto's subsystem
+ */
+int ssh_crypto_init(void) {
+    int rc = SSH_OK;
+    if (libcrypto_initialized == 0) {
+        if (SSLeay() != OPENSSL_VERSION_NUMBER){
+            SSH_LOG(SSH_LOG_WARNING, "libssh compiled with %s "
+                    "headers, currently running with %s.",
+                    OPENSSL_VERSION_TEXT,
+                    SSLeay_version(SSLeay())
+                    );
+            rc = SSH_ERROR;;
+        }
+#ifdef CAN_DISABLE_AESNI
+        /*
+         * disable AES-NI when running within Valgrind, because they generate
+         * too many "uninitialized memory access" false positives
+         */
+        if (RUNNING_ON_VALGRIND){
+            SSH_LOG(SSH_LOG_INFO, "Running within Valgrind, disabling AES-NI");
+            /* Bit #57 denotes AES-NI instruction set extension */
+            OPENSSL_ia32cap &= ~(1LL << 57);
+        }
+#endif
+        OpenSSL_add_all_algorithms();
+        libcrypto_init();
+        libcrypto_initialized = 1;
+    }
+    return rc;
+}
+
+/**
+ * @internal
+ * @brief Finalize libcrypto's subsystem
+ */
+void ssh_crypto_finalize(void) {
+    if (libcrypto_initialized) {
+        EVP_cleanup();
+        CRYPTO_cleanup_all_ex_data();
+        libcrypto_initialized=0;
+    }
+}
+
 void ssh_reseed(void){
 #ifndef _WIN32
     struct timeval tv;
     gettimeofday(&tv, NULL);
     RAND_add(&tv, sizeof(tv), 0.0);
 #endif
+}
+
+int ssh_get_random(void *where, int len, int strong){
+  if (strong) {
+    return RAND_bytes(where,len);
+  } else {
+    return RAND_pseudo_bytes(where,len);
+  }
+  /* never reached */
+  return 1;
 }
 
 SHACTX sha1_init(void)

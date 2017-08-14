@@ -385,6 +385,63 @@ static void torture_algorithms_dh_group1(void **state) {
 
     ssh_disconnect(session);
 }
+
+static void torture_algorithms_dh_group14(void **state) {
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, "diffie-hellman-group14-sha1");
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_true(rc == SSH_OK);
+    rc = ssh_userauth_none(session, NULL);
+    if (rc != SSH_OK) {
+      rc = ssh_get_error_code(session);
+      assert_true(rc == SSH_REQUEST_DENIED);
+    }
+
+    ssh_disconnect(session);
+}
+
+static void torture_algorithms_dh_gex_sha1(void **state) {
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, "diffie-hellman-group-exchange-sha1");
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_true(rc == SSH_OK);
+    rc = ssh_userauth_none(session, NULL);
+    if (rc != SSH_OK) {
+      rc = ssh_get_error_code(session);
+      assert_true(rc == SSH_REQUEST_DENIED);
+    }
+
+    ssh_disconnect(session);
+}
+
+static void torture_algorithms_dh_gex_sha256(void **state) {
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, "diffie-hellman-group-exchange-sha256");
+    assert_true(rc == SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_true(rc == SSH_OK);
+    rc = ssh_userauth_none(session, NULL);
+    if (rc != SSH_OK) {
+      rc = ssh_get_error_code(session);
+      assert_true(rc == SSH_REQUEST_DENIED);
+    }
+
+    ssh_disconnect(session);
+}
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
@@ -470,6 +527,15 @@ int torture_run_tests(void) {
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_algorithms_dh_group1,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_algorithms_dh_group14,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_algorithms_dh_gex_sha1,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_algorithms_dh_gex_sha256,
                                         session_setup,
                                         session_teardown),
 #if defined(HAVE_LIBCRYPTO) && defined(HAVE_ECC)

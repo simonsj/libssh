@@ -127,8 +127,8 @@ static int modulus_smaller(ssh_public_key k1, ssh_public_key k2){
     else
         res=0;
 #ifdef HAVE_LIBGCRYPT
-    bignum_free(n1);
-    bignum_free(n2);
+    bignum_safe_free(n1);
+    bignum_safe_free(n2);
 #endif
     return res;
     

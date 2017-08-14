@@ -47,6 +47,10 @@
 #include "libssh/crypto.h"
 #include "libssh/wrapper.h"
 #include "libssh/pki.h"
+#include "libssh/dh.h"
+#include "libssh/dh-gex.h"
+#include "libssh/ecdh.h"
+#include "libssh/curve25519.h"
 #include "libssh/poly1305.h"
 
 static struct ssh_hmac_struct ssh_hmac_tab[] = {
@@ -156,12 +160,8 @@ void crypto_free(struct ssh_crypto_struct *crypto){
 
   cipher_free(crypto->in_cipher);
   cipher_free(crypto->out_cipher);
-
-  bignum_free(crypto->e);
-  bignum_free(crypto->f);
-  bignum_free(crypto->x);
-  bignum_free(crypto->y);
-  bignum_free(crypto->k);
+  ssh_dh_cleanup(crypto);
+  bignum_safe_free(crypto->k);
 #ifdef HAVE_ECDH
   SAFE_FREE(crypto->ecdh_client_pubkey);
   SAFE_FREE(crypto->ecdh_server_pubkey);
@@ -501,6 +501,27 @@ int crypt_set_algorithms_server(ssh_session session){
     method = session->next_crypto->kex_methods[SSH_HOSTKEYS];
     session->srv.hostkey = ssh_key_type_from_name(method);
 
+    /* setup DH key exchange type */
+    switch (session->next_crypto->kex_type){
+    case SSH_KEX_DH_GROUP1_SHA1:
+    case SSH_KEX_DH_GROUP14_SHA1:
+      ssh_server_dh_init(session);
+      break;
+    case SSH_KEX_DH_GEX_SHA1:
+    case SSH_KEX_DH_GEX_SHA256:
+      ssh_server_dhgex_init(session);
+      break;
+#ifdef HAVE_ECDH
+    case SSH_KEX_ECDH_SHA2_NISTP256:
+      ssh_server_ecdh_init(session);
+      break;
+#endif
+#ifdef HAVE_CURVE25519
+    case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
+        ssh_server_curve25519_init(session);
+        break;
+#endif
+    }
     return SSH_OK;
 }
 

@@ -71,7 +71,7 @@ static ssh_packet_callback default_packet_handlers[]= {
 #else
   NULL,
 #endif
-  ssh_packet_dh_reply,                     // SSH2_MSG_KEXDH_REPLY                31
+  NULL,                                    // SSH2_MSG_KEXDH_REPLY                31
                                            // SSH2_MSG_KEX_DH_GEX_GROUP           31
   NULL,                                    // SSH2_MSG_KEX_DH_GEX_INIT            32
   NULL,                                    // SSH2_MSG_KEX_DH_GEX_REPLY           33
@@ -389,6 +389,17 @@ void ssh_packet_set_callbacks(ssh_session session, ssh_packet_callbacks callback
   if (session->packet_callbacks != NULL) {
     ssh_list_append(session->packet_callbacks, callbacks);
   }
+}
+
+/** @internal
+ * @brief remove the callbacks from the packet layer
+ */
+void ssh_packet_remove_callbacks(ssh_session session, ssh_packet_callbacks callbacks){
+    struct ssh_iterator *it;
+    it = ssh_list_find(session->packet_callbacks, callbacks);
+    if (it != NULL){
+        ssh_list_remove(session->packet_callbacks, it);
+    }
 }
 
 /** @internal

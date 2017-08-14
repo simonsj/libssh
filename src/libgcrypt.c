@@ -47,8 +47,45 @@ static int alloc_key(struct ssh_cipher_struct *cipher) {
     return 0;
 }
 
+static int libgcrypt_initialized = 0;
+/**
+ * @internal
+ * @brief Initialize libgcrypt's subsystem
+ */
+int ssh_crypto_init(void) {
+    if (libgcrypt_initialized == 0) {
+        gcry_check_version(NULL);
+        if (!gcry_control(GCRYCTL_INITIALIZATION_FINISHED_P,0)) {
+            gcry_control(GCRYCTL_INIT_SECMEM, 4096);
+            gcry_control(GCRYCTL_INITIALIZATION_FINISHED,0);
+        }
+
+        libgcrypt_initialized = 1;
+    }
+    return 0;
+}
+
+/**
+ * @internal
+ * @brief Finalize libgcrypt's subsystem
+ */
+void ssh_crypto_finalize(void) {
+    if (libgcrypt_initialized) {
+        gcry_control(GCRYCTL_TERM_SECMEM);
+    libgcrypt_initialized=0;
+  }
+}
+
 void ssh_reseed(void){
-	}
+}
+
+int ssh_get_random(void *where, int len, int strong){
+  /* variable not used in gcrypt */
+  (void) strong;
+  /* not using GCRY_VERY_STRONG_RANDOM which is a bit overkill */
+  gcry_randomize(where,len,GCRY_STRONG_RANDOM);
+  return 1;
+}
 
 SHACTX sha1_init(void) {
   SHACTX ctx = NULL;

@@ -38,6 +38,7 @@
 #include "libssh/socket.h"
 #include "libssh/session.h"
 #include "libssh/dh.h"
+#include "libssh/dh-gex.h"
 #include "libssh/ecdh.h"
 #include "libssh/threads.h"
 #include "libssh/misc.h"
@@ -258,6 +259,10 @@ static int dh_handshake(ssh_session session) {
         case SSH_KEX_DH_GROUP14_SHA1:
           rc = ssh_client_dh_init(session);
           break;
+        case SSH_KEX_DH_GEX_SHA1:
+        case SSH_KEX_DH_GEX_SHA256:
+          rc = ssh_client_dhgex_init(session);
+          break;
 #ifdef HAVE_ECDH
         case SSH_KEX_ECDH_SHA2_NISTP256:
           rc = ssh_client_ecdh_init(session);
@@ -276,7 +281,6 @@ static int dh_handshake(ssh_session session) {
           return SSH_ERROR;
       }
 
-      session->dh_handshake_state = DH_STATE_INIT_SENT;
     case DH_STATE_INIT_SENT:
     	/* wait until ssh_packet_dh_reply is called */
     	break;

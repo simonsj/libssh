@@ -50,6 +50,7 @@ typedef gcry_md_hd_t EVPCTX;
 #define EVP_DIGEST_LEN EVP_MAX_MD_SIZE
 
 typedef gcry_mpi_t bignum;
+typedef void* bignum_CTX;
 
 /* Constants for curves.  */
 #define NID_gcrypt_nistp256 0
@@ -61,15 +62,23 @@ int ssh_gcry_dec2bn(bignum *bn, const char *data);
 char *ssh_gcry_bn2dec(bignum bn);
 
 #define bignum_new() gcry_mpi_new(0)
-#define bignum_free(num) gcry_mpi_release(num)
-#define bignum_set_word(bn,n) gcry_mpi_set_ui(bn,n)
-#define bignum_bin2bn(bn,datalen,data) gcry_mpi_scan(data,GCRYMPI_FMT_USG,bn,datalen,NULL)
+#define bignum_safe_free(num) do { \
+    if ((num) != NULL) { \
+        gcry_mpi_release((num)); \
+        (num)=NULL; \
+    } \
+    } while (0)
+#define bignum_ctx_new() NULL
+#define bignum_ctx_free(num) do {(num) = NULL;} while(0)
+#define bignum_ctx_invalid(ctx) 0
+#define bignum_set_word(bn,n) (gcry_mpi_set_ui(bn,n)!=NULL ? 1 : 0)
+#define bignum_bin2bn(data,datalen,dest) gcry_mpi_scan(dest,GCRYMPI_FMT_USG,data,datalen,NULL)
 #define bignum_bn2dec(num) ssh_gcry_bn2dec(num)
 #define bignum_dec2bn(num, data) ssh_gcry_dec2bn(data, num)
 #define bignum_bn2hex(num,data) gcry_mpi_aprint(GCRYMPI_FMT_HEX,data,NULL,num)
-#define bignum_hex2bn(num,datalen,data) gcry_mpi_scan(num,GCRYMPI_FMT_HEX,data,datalen,NULL)
+#define bignum_hex2bn(data, num) gcry_mpi_scan(num,GCRYMPI_FMT_HEX,data,0,NULL)
 #define bignum_rand(num,bits) gcry_mpi_randomize(num,bits,GCRY_STRONG_RANDOM),gcry_mpi_set_bit(num,bits-1),gcry_mpi_set_bit(num,0)
-#define bignum_mod_exp(dest,generator,exp,modulo) gcry_mpi_powm(dest,generator,exp,modulo)
+#define bignum_mod_exp(dest,generator,exp,modulo, ctx) gcry_mpi_powm(dest,generator,exp,modulo)
 #define bignum_num_bits(num) gcry_mpi_get_nbits(num)
 #define bignum_num_bytes(num) ((gcry_mpi_get_nbits(num)+7)/8)
 #define bignum_is_bit_set(num,bit) gcry_mpi_test_bit(num,bit)
