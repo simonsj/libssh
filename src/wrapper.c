@@ -513,6 +513,8 @@ int crypt_set_algorithms_server(ssh_session session){
       break;
 #ifdef HAVE_ECDH
     case SSH_KEX_ECDH_SHA2_NISTP256:
+    case SSH_KEX_ECDH_SHA2_NISTP384:
+    case SSH_KEX_ECDH_SHA2_NISTP521:
       ssh_server_ecdh_init(session);
       break;
 #endif

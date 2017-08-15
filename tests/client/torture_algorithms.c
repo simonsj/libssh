@@ -365,6 +365,44 @@ static void torture_algorithms_ecdh_sha2_nistp256(void **state) {
 
     ssh_disconnect(session);
 }
+
+static void torture_algorithms_ecdh_sha2_nistp384(void **state) {
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, "ecdh-sha2-nistp384");
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_int_equal(rc, SSH_OK);
+    rc = ssh_userauth_none(session, NULL);
+    if (rc != SSH_OK) {
+      rc = ssh_get_error_code(session);
+      assert_int_equal(rc, SSH_REQUEST_DENIED);
+    }
+
+    ssh_disconnect(session);
+}
+
+static void torture_algorithms_ecdh_sha2_nistp521(void **state) {
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    int rc;
+
+    rc = ssh_options_set(session, SSH_OPTIONS_KEY_EXCHANGE, "ecdh-sha2-nistp521");
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_int_equal(rc, SSH_OK);
+    rc = ssh_userauth_none(session, NULL);
+    if (rc != SSH_OK) {
+      rc = ssh_get_error_code(session);
+      assert_int_equal(rc, SSH_REQUEST_DENIED);
+    }
+
+    ssh_disconnect(session);
+}
 #endif
 
 static void torture_algorithms_dh_group1(void **state) {
@@ -540,6 +578,12 @@ int torture_run_tests(void) {
                                         session_teardown),
 #if defined(HAVE_LIBCRYPTO) && defined(HAVE_ECC)
         cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sha2_nistp256,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sha2_nistp384,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sha2_nistp521,
                                         session_setup,
                                         session_teardown),
 #endif
