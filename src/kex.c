@@ -569,37 +569,38 @@ static char *ssh_client_select_hostkeys(ssh_session session){
     int needcoma=0;
 
     methods = ssh_knownhosts_algorithms(session);
-	if (methods == NULL || methods[0] == NULL){
-		SAFE_FREE(methods);
-		return NULL;
-	}
+    if (methods == NULL || methods[0] == NULL){
+        SAFE_FREE(methods);
+        return NULL;
+    }
 
-	for (i=0;preferred_hostkeys[i] != NULL; ++i){
-		for (j=0; methods[j] != NULL; ++j){
-			if(strcmp(preferred_hostkeys[i], methods[j]) == 0){
-				if (ssh_verify_existing_algo(SSH_HOSTKEYS, methods[j])){
-					if(needcoma)
-						strncat(methods_buffer,",",sizeof(methods_buffer)-strlen(methods_buffer)-1);
-					strncat(methods_buffer, methods[j], sizeof(methods_buffer)-strlen(methods_buffer)-1);
-					needcoma = 1;
-				}
-			}
-		}
-	}
-	for(i=0;methods[i]!= NULL; ++i){
-		SAFE_FREE(methods[i]);
-	}
-	SAFE_FREE(methods);
+    for (i = 0; preferred_hostkeys[i] != NULL; ++i) {
+        for (j = 0; methods[j] != NULL; ++j) {
+            if (strcmp(preferred_hostkeys[i], methods[j]) == 0) {
+                if (ssh_verify_existing_algo(SSH_HOSTKEYS, methods[j]) == SSH_OK) {
+                    if (needcoma) {
+                        strncat(methods_buffer, ",", sizeof(methods_buffer) - strlen(methods_buffer) - 1);
+                    }
+                    strncat(methods_buffer, methods[j], sizeof(methods_buffer) - strlen(methods_buffer) - 1);
+                    needcoma = 1;
+                }
+            }
+        }
+    }
+    for (i = 0; methods[i] != NULL; ++i) {
+        SAFE_FREE(methods[i]);
+    }
+    SAFE_FREE(methods);
 
-	if(strlen(methods_buffer) > 0){
-		SSH_LOG(SSH_LOG_DEBUG, "Changing host key method to \"%s\"", methods_buffer);
-		return strdup(methods_buffer);
-	} else {
-		SSH_LOG(SSH_LOG_DEBUG, "No supported kex method for existing key in known_hosts file");
-		return NULL;
-	}
-
+    if(strlen(methods_buffer) > 0){
+        SSH_LOG(SSH_LOG_DEBUG, "Changing host key method to \"%s\"", methods_buffer);
+        return strdup(methods_buffer);
+    } else {
+        SSH_LOG(SSH_LOG_DEBUG, "No supported kex method for existing key in known_hosts file");
+        return NULL;
+    }
 }
+
 /**
  * @brief sets the key exchange parameters to be sent to the server,
  *        in function of the options and available methods.
@@ -724,21 +725,23 @@ error:
   return -1;
 }
 
-/* returns 1 if at least one of the name algos is in the default algorithms table */
+/** @brief Returns SSH_OK if a at least one of the name algos is in
+ * the default algorithms table */
 int ssh_verify_existing_algo(enum ssh_kex_types_e algo, const char *name)
 {
     char *ptr;
 
     if (algo > SSH_LANG_S_C) {
-        return -1;
+        return SSH_ERROR;
     }
 
-    ptr=ssh_find_matching(supported_methods[algo],name);
-    if(ptr){
+    ptr = ssh_find_matching(supported_methods[algo],name);
+    if (ptr) {
         free(ptr);
-        return 1;
+        return SSH_OK;
     }
-    return 0;
+
+    return SSH_ERROR;
 }
 
 /* returns a copy of the provided list if everything is supported,
