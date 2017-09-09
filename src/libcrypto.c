@@ -139,19 +139,19 @@ static const EVP_MD *nid_to_evpmd(int nid)
 void evp(int nid, unsigned char *digest, int len, unsigned char *hash, unsigned int *hlen)
 {
     const EVP_MD *evp_md = nid_to_evpmd(nid);
-    EVP_MD_CTX *md = EVP_MD_CTX_new();
+    EVP_MD_CTX *md = EVP_MD_CTX_new(); /* TODO: not in BoringSSL */
 
     EVP_DigestInit(md, evp_md);
     EVP_DigestUpdate(md, digest, len);
     EVP_DigestFinal(md, hash, hlen);
-    EVP_MD_CTX_free(md);
+    EVP_MD_CTX_free(md); /* TODO: not in BoringSSL */
 }
 
 EVPCTX evp_init(int nid)
 {
     const EVP_MD *evp_md = nid_to_evpmd(nid);
 
-    EVPCTX ctx = EVP_MD_CTX_new();
+    EVPCTX ctx = EVP_MD_CTX_new(); /* TODO: not in BoringSSL */
     if (ctx == NULL) {
         return NULL;
     }
@@ -383,13 +383,13 @@ void ssh_mac_final(unsigned char *md, ssh_mac_ctx ctx) {
 HMACCTX hmac_init(const void *key, int len, enum ssh_hmac_e type) {
   HMACCTX ctx = NULL;
 
-  ctx = HMAC_CTX_new();
+  ctx = HMAC_CTX_new(); /* TODO: not in BoringSSL */
   if (ctx == NULL) {
     return NULL;
   }
 
 #ifndef OLD_CRYPTO
-  HMAC_CTX_reset(ctx); // openssl 0.9.7 requires it.
+  HMAC_CTX_reset(ctx); // openssl 0.9.7 requires it. /* TODO: not in BoringSSL */
 #endif
 
   switch(type) {
@@ -409,7 +409,7 @@ HMACCTX hmac_init(const void *key, int len, enum ssh_hmac_e type) {
       HMAC_Init_ex(ctx, key, len, EVP_md5(), NULL);
       break;
     default:
-      HMAC_CTX_free(ctx);
+      HMAC_CTX_free(ctx); /* TODO: not in BoringSSL */
       SAFE_FREE(ctx);
       ctx = NULL;
   }
@@ -470,7 +470,7 @@ static void evp_cipher_init(struct ssh_cipher_struct *cipher) {
         cipher->cipher = EVP_des_ede3_cbc();
         break;
     case SSH_BLOWFISH_CBC:
-        cipher->cipher = EVP_bf_cbc();
+        cipher->cipher = EVP_bf_cbc(); /* TODO: not in BoringSSL */
         break;
         /* ciphers not using EVP */
     case SSH_3DES_CBC_SSH1:
@@ -652,9 +652,9 @@ static void des3_1_encrypt(struct ssh_cipher_struct *cipher, void *in,
 #ifdef DEBUG_CRYPTO
   ssh_print_hexa("Encrypt IV before", cipher->des3_key->ivs.c, 24);
 #endif
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1);
-  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 0);
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[2], 1);
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1); /* TODO: BoringSSL signature mismatch */
+  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 0); /* TODO: BoringSSL signature mismatch */
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[2], 1); /* TODO: BoringSSL signature mismatch */
 #ifdef DEBUG_CRYPTO
   ssh_print_hexa("Encrypt IV after", cipher->des3_key->ivs.c, 24);
 #endif
@@ -666,9 +666,9 @@ static void des3_1_decrypt(struct ssh_cipher_struct *cipher, void *in,
   ssh_print_hexa("Decrypt IV before", cipher->des3_key->ivs.c, 24);
 #endif
 
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[0], 0);
-  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 1);
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[2], 0);
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[0], 0); /* TODO: BoringSSL signature mismatch */
+  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 1); /* TODO: BoringSSL signature mismatch */
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[2], 0); /* TODO: BoringSSL signature mismatch */
 
 #ifdef DEBUG_CRYPTO
   ssh_print_hexa("Decrypt IV after", cipher->des3_key->ivs.c, 24);
@@ -689,12 +689,12 @@ static int des1_set_key(struct ssh_cipher_struct *cipher, void *key, void *IV) {
 
 static void des1_1_encrypt(struct ssh_cipher_struct *cipher, void *in, void *out,
                            unsigned long len){
-    DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1);
+    DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1); /* TODO: BoringSSL signature mismatch */
 }
 
 static void des1_1_decrypt(struct ssh_cipher_struct *cipher, void *in, void *out,
         unsigned long len){
-    DES_ncbc_encrypt(in,out,len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 0);
+    DES_ncbc_encrypt(in,out,len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 0); /* TODO: BoringSSL signature mismatch */
 }
 
 static void des_cleanup(struct ssh_cipher_struct *cipher){
