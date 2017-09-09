@@ -456,11 +456,34 @@ int pki_key_generate_rsa(ssh_key key, int parameter){
 
 int pki_key_generate_dss(ssh_key key, int parameter){
     int rc;
+
+#if !defined(OPENSSL_IS_BORINGSSL)
     key->dsa = DSA_generate_parameters(parameter, NULL, 0, NULL, NULL,
             NULL, NULL);
     if(key->dsa == NULL){
         return SSH_ERROR;
     }
+#else  /* !defined(OPENSSL_IS_BORINGSSL) */
+    DSA *dsa = DSA_new();
+    if (dsa == NULL) {
+        return SSH_ERROR;
+    }
+
+    rc = DSA_generate_parameters_ex(dsa,       /* DSA */
+                                    parameter, /* bits */
+                                    NULL,      /* seed_in */
+                                    0,         /* seed_len */
+                                    NULL,      /* out_counter */
+                                    NULL,      /* out_h */
+                                    NULL);     /* cb */
+    if (rc != 1) {
+        DSA_free(dsa);
+        return SSH_ERROR;
+    }
+
+    key->dsa = dsa;
+#endif /* !defined(OPENSSL_IS_BORINGSSL) */
+
     rc = DSA_generate_key(key->dsa);
     if (rc != 1){
         DSA_free(key->dsa);
