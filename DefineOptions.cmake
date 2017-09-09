@@ -19,6 +19,7 @@ if (WITH_ZLIB)
 else (WITH_ZLIB)
     set(WITH_LIBZ OFF)
 endif (WITH_ZLIB)
+option(WITH_BORINGSSL "Compile against boringssl" OFF)
 
 if(WITH_BENCHMARKS)
   set(WITH_TESTING ON)
