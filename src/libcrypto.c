@@ -46,16 +46,18 @@
 
 #if !defined(OPENSSL_IS_BORINGSSL)
 #include "libcrypto-compat.h"
+#else  /* !defined(OPENSSL_IS_BORINGSSL) */
+#include "libcrypto-boringssl-compat.h"
 #endif /* !defined(OPENSSL_IS_BORINGSSL) */
 
 #ifdef HAVE_OPENSSL_AES_H
 #define HAS_AES
 #include <openssl/aes.h>
 #endif
-#ifdef HAVE_OPENSSL_DES_H
+#if defined(HAVE_OPENSSL_DES_H) && !defined(OPENSSL_IS_BORINGSSL)
 #define HAS_DES
 #include <openssl/des.h>
-#endif
+#endif /* defined(HAVE_OPENSSL_DES_H) && !defined(OPENSSL_IS_BORINGSSL) */
 
 #if (OPENSSL_VERSION_NUMBER<0x00907000L)
 #define OLD_CRYPTO
@@ -139,19 +141,19 @@ static const EVP_MD *nid_to_evpmd(int nid)
 void evp(int nid, unsigned char *digest, int len, unsigned char *hash, unsigned int *hlen)
 {
     const EVP_MD *evp_md = nid_to_evpmd(nid);
-    EVP_MD_CTX *md = EVP_MD_CTX_new(); /* TODO: not in BoringSSL */
+    EVP_MD_CTX *md = EVP_MD_CTX_new();
 
     EVP_DigestInit(md, evp_md);
     EVP_DigestUpdate(md, digest, len);
     EVP_DigestFinal(md, hash, hlen);
-    EVP_MD_CTX_free(md); /* TODO: not in BoringSSL */
+    EVP_MD_CTX_free(md);
 }
 
 EVPCTX evp_init(int nid)
 {
     const EVP_MD *evp_md = nid_to_evpmd(nid);
 
-    EVPCTX ctx = EVP_MD_CTX_new(); /* TODO: not in BoringSSL */
+    EVPCTX ctx = EVP_MD_CTX_new();
     if (ctx == NULL) {
         return NULL;
     }
@@ -383,13 +385,13 @@ void ssh_mac_final(unsigned char *md, ssh_mac_ctx ctx) {
 HMACCTX hmac_init(const void *key, int len, enum ssh_hmac_e type) {
   HMACCTX ctx = NULL;
 
-  ctx = HMAC_CTX_new(); /* TODO: not in BoringSSL */
+  ctx = HMAC_CTX_new();
   if (ctx == NULL) {
     return NULL;
   }
 
 #ifndef OLD_CRYPTO
-  HMAC_CTX_reset(ctx); // openssl 0.9.7 requires it. /* TODO: not in BoringSSL */
+  HMAC_CTX_reset(ctx); // openssl 0.9.7 requires it.
 #endif
 
   switch(type) {
@@ -409,7 +411,7 @@ HMACCTX hmac_init(const void *key, int len, enum ssh_hmac_e type) {
       HMAC_Init_ex(ctx, key, len, EVP_md5(), NULL);
       break;
     default:
-      HMAC_CTX_free(ctx); /* TODO: not in BoringSSL */
+      HMAC_CTX_free(ctx);
       SAFE_FREE(ctx);
       ctx = NULL;
   }
@@ -469,15 +471,18 @@ static void evp_cipher_init(struct ssh_cipher_struct *cipher) {
     case SSH_3DES_CBC:
         cipher->cipher = EVP_des_ede3_cbc();
         break;
+#if !defined(OPENSSL_IS_BORINGSSL)
     case SSH_BLOWFISH_CBC:
-        cipher->cipher = EVP_bf_cbc(); /* TODO: not in BoringSSL */
+        cipher->cipher = EVP_bf_cbc();
         break;
+#endif /* !defined(OPENSSL_IS_BORINGSSL) */
         /* ciphers not using EVP */
     case SSH_3DES_CBC_SSH1:
     case SSH_DES_CBC_SSH1:
         SSH_LOG(SSH_LOG_WARNING, "This cipher should not use evp_cipher_init");
         break;
     case SSH_NO_CIPHER:
+    default:
         SSH_LOG(SSH_LOG_WARNING, "No valid ciphertype found");
         break;
     }
@@ -652,9 +657,9 @@ static void des3_1_encrypt(struct ssh_cipher_struct *cipher, void *in,
 #ifdef DEBUG_CRYPTO
   ssh_print_hexa("Encrypt IV before", cipher->des3_key->ivs.c, 24);
 #endif
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1); /* TODO: BoringSSL signature mismatch */
-  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 0); /* TODO: BoringSSL signature mismatch */
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[2], 1); /* TODO: BoringSSL signature mismatch */
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1);
+  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 0);
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[2], 1);
 #ifdef DEBUG_CRYPTO
   ssh_print_hexa("Encrypt IV after", cipher->des3_key->ivs.c, 24);
 #endif
@@ -666,9 +671,9 @@ static void des3_1_decrypt(struct ssh_cipher_struct *cipher, void *in,
   ssh_print_hexa("Decrypt IV before", cipher->des3_key->ivs.c, 24);
 #endif
 
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[0], 0); /* TODO: BoringSSL signature mismatch */
-  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 1); /* TODO: BoringSSL signature mismatch */
-  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[2], 0); /* TODO: BoringSSL signature mismatch */
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[2], &cipher->des3_key->ivs.v[0], 0);
+  DES_ncbc_encrypt(out, in, len, &cipher->des3_key->keys[1], &cipher->des3_key->ivs.v[1], 1);
+  DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[2], 0);
 
 #ifdef DEBUG_CRYPTO
   ssh_print_hexa("Decrypt IV after", cipher->des3_key->ivs.c, 24);
@@ -689,12 +694,12 @@ static int des1_set_key(struct ssh_cipher_struct *cipher, void *key, void *IV) {
 
 static void des1_1_encrypt(struct ssh_cipher_struct *cipher, void *in, void *out,
                            unsigned long len){
-    DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1); /* TODO: BoringSSL signature mismatch */
+    DES_ncbc_encrypt(in, out, len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 1);
 }
 
 static void des1_1_decrypt(struct ssh_cipher_struct *cipher, void *in, void *out,
         unsigned long len){
-    DES_ncbc_encrypt(in,out,len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 0); /* TODO: BoringSSL signature mismatch */
+    DES_ncbc_encrypt(in,out,len, &cipher->des3_key->keys[0], &cipher->des3_key->ivs.v[0], 0);
 }
 
 static void des_cleanup(struct ssh_cipher_struct *cipher){
@@ -708,6 +713,7 @@ static void des_cleanup(struct ssh_cipher_struct *cipher){
  * The table of supported ciphers
  */
 static struct ssh_cipher_struct ssh_ciphertab[] = {
+#if !defined(OPENSSL_IS_BORINGSSL)
   {
     .name = "blowfish-cbc",
     .blocksize = 8,
@@ -719,6 +725,7 @@ static struct ssh_cipher_struct ssh_ciphertab[] = {
     .decrypt = evp_cipher_decrypt,
     .cleanup = evp_cipher_cleanup
   },
+#endif /* !defined(OPENSSL_IS_BORINGSSL) */
 #ifdef HAS_AES
 #ifndef BROKEN_AES_CTR
 /* OpenSSL until 0.9.7c has a broken AES_ctr128_encrypt implementation which
