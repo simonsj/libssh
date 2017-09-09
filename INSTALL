@@ -84,6 +84,17 @@ and
 
 ZLIB_ROOT_DIR
 
+### Building with BoringSSL
+
+To build with BoringSSL, provide OPENSSL_ROOT_DIR and WITH_BORINGSSL=ON
+to cmake:
+
+`cmake -DOPENSSL_ROOT_DIR=<path/to/boringssl> -DWITH_BORINGSSL=ON ..`
+
+<path/to/boringssl> should be your BoringSSL workspace root.  Ensure
+that the BoringSSL libraries can be found at OPENSSL_ROOT_DIR/lib,
+and you are using a recent version of cmake.
+
 ## Installing
 
 If you want to install libssh after compilation run:
