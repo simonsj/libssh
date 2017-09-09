@@ -45,11 +45,11 @@
 
 #elif defined(HAVE_LIBCRYPTO)
 
-# ifdef HAVE_OPENSSL_BLOWFISH_H
+# if defined(HAVE_OPENSSL_BLOWFISH_H) && !defined(OPENSSL_IS_BORINGSSL)
 #  define BLOWFISH "blowfish-cbc,"
-# else /* HAVE_OPENSSL_BLOWFISH_H */
+# else /* HAVE_OPENSSL_BLOWFISH_H && !defined(OPENSSL_IS_BORINGSSL) */
 #  define BLOWFISH ""
-# endif /* HAVE_OPENSSL_BLOWFISH_H */
+# endif /* HAVE_OPENSSL_BLOWFISH_H && !defined(OPENSSL_IS_BORINGSSL) */
 
 # ifdef HAVE_OPENSSL_AES_H
 #  ifdef BROKEN_AES_CTR
@@ -61,8 +61,14 @@
 #  define AES ""
 # endif /* HAVE_OPENSSL_AES_H */
 
+# if !defined(OPENSSL_IS_BORINGSSL)
 # define DES "3des-cbc"
 # define DES_SUPPORTED "3des-cbc,des-cbc-ssh1"
+# else /* !defined(OPENSSL_IS_BORINGSSL) */
+# define DES ""
+# define DES_SUPPORTED ""
+# endif /* !defined(OPENSSL_IS_BORINGSSL) */
+
 #endif /* HAVE_LIBCRYPTO */
 
 #ifdef WITH_ZLIB
