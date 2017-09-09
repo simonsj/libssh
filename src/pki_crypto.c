@@ -34,6 +34,8 @@
 
 #if !defined(OPENSSL_IS_BORINGSSL)
 #include "libcrypto-compat.h"
+#else  /* !defined(OPENSSL_IS_BORINGSSL) */
+#include "libcrypto-boringssl-compat.h"
 #endif /* !defined(OPENSSL_IS_BORINGSSL) */
 
 #ifdef HAVE_OPENSSL_EC_H
@@ -261,7 +263,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
             goto fail;
         }
 
-        rc = DSA_set0_pqg(new->dsa, np, nq, ng); /* TODO: not in BoringSSL */
+        rc = DSA_set0_pqg(new->dsa, np, nq, ng);
         if (rc == 0) {
             BN_free(np);
             BN_free(nq);
@@ -275,7 +277,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
             goto fail;
         }
 
-        rc = DSA_set0_key(new->dsa, npub_key, NULL); /* TODO: not in BoringSSL */
+        rc = DSA_set0_key(new->dsa, npub_key, NULL);
         if (rc == 0) {
             goto fail;
         }
@@ -322,7 +324,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
             goto fail;
         }
 
-        rc = RSA_set0_key(new->rsa, nn, ne, NULL); /* TODO: not in BoringSSL */
+        rc = RSA_set0_key(new->rsa, nn, ne, NULL);
         if (rc == 0) {
             BN_free(nn);
             BN_free(ne);
@@ -357,7 +359,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
                     goto fail;
                 }
 
-                rc = RSA_set0_factors(new->rsa, np, nq); /* TODO: not in BoringSSL */
+                rc = RSA_set0_factors(new->rsa, np, nq);
                 if (rc == 0) {
                     BN_free(np);
                     BN_free(nq);
@@ -377,7 +379,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
                     goto fail;
                 }
 
-                rc =  RSA_set0_crt_params(new->rsa, ndmp1, ndmq1, niqmp); /* TODO: not in BoringSSL */
+                rc =  RSA_set0_crt_params(new->rsa, ndmp1, ndmq1, niqmp);
                 if (rc == 0) {
                     BN_free(ndmp1);
                     BN_free(ndmq1);
@@ -1250,7 +1252,7 @@ static ssh_string pki_dsa_signature_to_blob(const ssh_signature sig)
     ssh_string s;
     int s_len, s_offset_in, s_offset_out;
 
-    DSA_SIG_get0(sig->dsa_sig, &pr, &ps); /* TODO: not in BoringSSL */
+    DSA_SIG_get0(sig->dsa_sig, &pr, &ps);
     r = ssh_make_bignum_string((BIGNUM *)pr);
     if (r == NULL) {
         return NULL;
@@ -1316,7 +1318,7 @@ ssh_string pki_signature_to_blob(const ssh_signature sig)
                 return NULL;
             }
 
-            ECDSA_SIG_get0(sig->ecdsa_sig, &pr, &ps); /* TODO: not in BoringSSL */
+            ECDSA_SIG_get0(sig->ecdsa_sig, &pr, &ps);
             r = ssh_make_bignum_string((BIGNUM *)pr);
             if (r == NULL) {
                 ssh_buffer_free(b);
@@ -1500,7 +1502,7 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
                 return NULL;
             }
 
-            rc = DSA_SIG_set0(sig->dsa_sig, pr, ps); /* TODO: not in BoringSSL */
+            rc = DSA_SIG_set0(sig->dsa_sig, pr, ps);
             if (rc == 0) {
                 ssh_signature_free(sig);
                 return NULL;
@@ -1578,7 +1580,7 @@ ssh_signature pki_signature_from_blob(const ssh_key pubkey,
                     return NULL;
                 }
 
-                rc = ECDSA_SIG_set0(sig->ecdsa_sig, pr, ps); /* TODO: not in BoringSSL */
+                rc = ECDSA_SIG_set0(sig->ecdsa_sig, pr, ps);
                 if (rc == 0) {
                     ssh_signature_free(sig);
                     return NULL;

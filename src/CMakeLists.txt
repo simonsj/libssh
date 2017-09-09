@@ -167,11 +167,13 @@ else (WITH_GCRYPT)
         ecdh_crypto.c
         libcrypto.c
        )
-    if(OPENSSL_VERSION VERSION_LESS "1.1.0")
-        if (NOT WITH_BORINGSSL)
+    if (WITH_BORINGSSL)
+        set(libssh_SRCS ${libssh_SRCS} libcrypto-boringssl-compat.c)
+    else (WITH_BORINGSSL)
+        if (OPENSSL_VERSION VERSION_LESS "1.1.0")
             set(libssh_SRCS ${libssh_SRCS} libcrypto-compat.c)
-        endif (NOT WITH_BORINGSSL)
-    endif()
+        endif (OPENSSL_VERSION VERSION_LESS "1.1.0")
+    endif (WITH_BORINGSSL)
 endif (WITH_GCRYPT)
 
 if (WITH_SFTP)
