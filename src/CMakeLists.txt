@@ -168,7 +168,9 @@ else (WITH_GCRYPT)
         libcrypto.c
        )
     if(OPENSSL_VERSION VERSION_LESS "1.1.0")
-        set(libssh_SRCS ${libssh_SRCS} libcrypto-compat.c)
+        if (NOT WITH_BORINGSSL)
+            set(libssh_SRCS ${libssh_SRCS} libcrypto-compat.c)
+        endif (NOT WITH_BORINGSSL)
     endif()
 endif (WITH_GCRYPT)
 

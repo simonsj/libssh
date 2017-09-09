@@ -13,6 +13,10 @@
 #include <openssl/engine.h>
 #include "libcrypto-compat.h"
 
+#if defined(OPENSSL_IS_BORINGSSL)
+#error "OpenSSL libcrypto compat used for BoringSSL build"
+#endif /* defined(OPENSSL_IS_BORINGSSL) */
+
 static void *OPENSSL_zalloc(size_t num)
 {
     void *ret = OPENSSL_malloc(num);

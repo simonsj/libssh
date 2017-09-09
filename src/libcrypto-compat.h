@@ -4,6 +4,10 @@
 #include <openssl/opensslv.h>
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 
+#if defined(OPENSSL_IS_BORINGSSL)
+#error "OpenSSL libcrypto compat header used for BoringSSL build"
+#endif /* defined(OPENSSL_IS_BORINGSSL) */
+
 #include <openssl/rsa.h>
 #include <openssl/dsa.h>
 #include <openssl/ecdsa.h>

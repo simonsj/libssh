@@ -43,7 +43,10 @@
 #include <openssl/hmac.h>
 #include <openssl/opensslv.h>
 #include <openssl/rand.h>
+
+#if !defined(OPENSSL_IS_BORINGSSL)
 #include "libcrypto-compat.h"
+#endif /* !defined(OPENSSL_IS_BORINGSSL) */
 
 #ifdef HAVE_OPENSSL_AES_H
 #define HAS_AES

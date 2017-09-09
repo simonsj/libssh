@@ -31,7 +31,10 @@
 #include <openssl/dsa.h>
 #include <openssl/err.h>
 #include <openssl/rsa.h>
+
+#if !defined(OPENSSL_IS_BORINGSSL)
 #include "libcrypto-compat.h"
+#endif /* !defined(OPENSSL_IS_BORINGSSL) */
 
 #ifdef HAVE_OPENSSL_EC_H
 #include <openssl/ec.h>
