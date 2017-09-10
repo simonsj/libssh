@@ -25,6 +25,10 @@
 #include "libssh/libssh.h"
 #include "libssh/priv.h"
 
+#ifdef HAVE_LIBCRYPTO
+#include <openssl/opensslv.h> // for detecting BoringSSL mode
+#endif /* HAVE_LIBCRYPTO */
+
 #include <errno.h>
 #include <sys/types.h>
 #include <pwd.h>
@@ -212,6 +216,7 @@ static void torture_algorithms_aes256_ctr_hmac_sha2_512(void **state) {
     test_algorithm(s->ssh.session, "aes256-ctr", "hmac-sha2-512");
 }
 
+#if !defined(OPENSSL_IS_BORINGSSL)
 static void torture_algorithms_3des_cbc_hmac_sha1(void **state) {
     struct torture_state *s = *state;
 
@@ -247,6 +252,7 @@ static void torture_algorithms_blowfish_cbc_hmac_sha2_512(void **state) {
 
     test_algorithm(s->ssh.session, "blowfish-cbc", "hmac-sha2-512");
 }
+#endif /* !defined(OPENSSL_IS_BORINGSSL) */
 
 static void torture_algorithms_zlib(void **state) {
     struct torture_state *s = *state;
@@ -459,6 +465,7 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_algorithms_aes256_ctr_hmac_sha2_512,
                                         session_setup,
                                         session_teardown),
+#if !defined(OPENSSL_IS_BORINGSSL)
         cmocka_unit_test_setup_teardown(torture_algorithms_3des_cbc_hmac_sha1,
                                         session_setup,
                                         session_teardown),
@@ -477,6 +484,7 @@ int torture_run_tests(void) {
         cmocka_unit_test_setup_teardown(torture_algorithms_blowfish_cbc_hmac_sha2_512,
                                         session_setup,
                                         session_teardown),
+#endif /* !defined(OPENSSL_IS_BORINGSSL) */
         cmocka_unit_test_setup_teardown(torture_algorithms_zlib,
                                         session_setup,
                                         session_teardown),
