@@ -31,6 +31,8 @@
 
 #include "config.h"
 
+#include <stddef.h>
+
 #if !defined(HAVE_STRTOULL)
 # if defined(HAVE___STRTOULL)
 #  define strtoull __strtoull
