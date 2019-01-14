@@ -28,6 +28,11 @@
 #include <sys/time.h>
 #endif
 
+#if (defined(HAVE_VALGRIND_VALGRIND_H) && defined(HAVE_OPENSSL_IA32CAP_LOC))
+#include <valgrind/valgrind.h>
+#define CAN_DISABLE_AESNI
+#endif
+
 #include "libssh/priv.h"
 #include "libssh/session.h"
 #include "libssh/crypto.h"
@@ -52,11 +57,6 @@
 #ifdef HAVE_OPENSSL_DES_H
 #define HAS_DES
 #include <openssl/des.h>
-#endif
-
-#if (defined(HAVE_VALGRIND_VALGRIND_H) && defined(HAVE_OPENSSL_IA32CAP_LOC))
-#include <valgrind/valgrind.h>
-#define CAN_DISABLE_AESNI
 #endif
 
 #include "libssh/crypto.h"
