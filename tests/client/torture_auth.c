@@ -551,6 +551,7 @@ static void torture_auth_cert(void **state) {
 
 static void torture_auth_agent_cert(void **state)
 {
+#if OPENSSH_VERSION_MAJOR < 8
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
     int rc;
@@ -570,6 +571,7 @@ static void torture_auth_agent_cert(void **state)
                              "ssh-rsa-cert-v01@openssh.com");
         assert_int_equal(rc, SSH_OK);
     }
+#endif /* OPENSSH_VERSION_MAJOR < 8 */
 
     /* Setup loads a different key, tests are exactly the same. */
     torture_auth_agent(state);
@@ -577,6 +579,7 @@ static void torture_auth_agent_cert(void **state)
 
 static void torture_auth_agent_cert_nonblocking(void **state)
 {
+#if OPENSSH_VERSION_MAJOR < 8
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
     int rc;
@@ -596,6 +599,7 @@ static void torture_auth_agent_cert_nonblocking(void **state)
                              "ssh-rsa-cert-v01@openssh.com");
         assert_int_equal(rc, SSH_OK);
     }
+#endif /* OPENSSH_VERSION_MAJOR < 8 */
 
     torture_auth_agent_nonblocking(state);
 }
