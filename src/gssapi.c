@@ -223,6 +223,7 @@ int ssh_gssapi_handle_userauth(ssh_session session, const char *user, uint32_t n
                              "indicate mechs",
                              maj_stat,
                              min_stat);
+        gss_release_oid_set(&min_stat, &both_supported);
         return SSH_ERROR;
     }
 
@@ -259,8 +260,10 @@ int ssh_gssapi_handle_userauth(ssh_session session, const char *user, uint32_t n
         return SSH_OK;
     }
     /* from now we have room for context */
-    if (ssh_gssapi_init(session) == SSH_ERROR)
+    if (ssh_gssapi_init(session) == SSH_ERROR) {
+        gss_release_oid_set(&min_stat, &both_supported);
         return SSH_ERROR;
+    }
 
     name_buf.value = service_name;
     name_buf.length = strlen(name_buf.value) + 1;
@@ -272,6 +275,7 @@ int ssh_gssapi_handle_userauth(ssh_session session, const char *user, uint32_t n
                              "importing name",
                              maj_stat,
                              min_stat);
+        gss_release_oid_set(&min_stat, &both_supported);
         return -1;
     }
 
