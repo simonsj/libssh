@@ -513,6 +513,12 @@ static void torture_server_config_ciphers(void **state)
         /* Try each algorithm individually */
         j = 0;
         while(tokens->tokens[j] != NULL) {
+            char *cmp = strstr(OPENSSH_CIPHERS, tokens->tokens[j]);
+            if (cmp == NULL) {
+                /* This cipher is not supported by the OpenSSH. Skip it */
+                j++;
+                continue;
+            }
             snprintf(config_content,
                     sizeof(config_content),
                     "HostKey %s\nCiphers %s\n",
