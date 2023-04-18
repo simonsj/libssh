@@ -90,8 +90,8 @@ fedora/openssl_1.1.x/x86_64:
     paths:
       - obj/
 
-fedora/openssl_1.1.x/x86_64/fips:
-  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+centos8/openssl_1.1.1/x86_64/fips:
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS8_BUILD
   script:
   - echo 1 > /etc/system-fips
   - update-crypto-policies --set FIPS
