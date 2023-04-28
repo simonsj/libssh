@@ -1,6 +1,13 @@
 ChangeLog
 ==========
 
+version 0.9.7 (released 2023-05-04)
+  * Fix CVE-2023-1667: a NULL dereference during rekeying with algorithm guessing
+  * Fix CVE-2023-2283: a possible authorization bypass in
+    pki_verify_data_signature under low-memory conditions.
+  * Fix several memory leaks in GSSAPI handling code
+  * Build and test related backports
+
 version 0.9.6 (released 2021-08-26)
   * CVE-2021-3634: Fix possible heap-buffer overflow when rekeying with
     different key exchange mechanism
