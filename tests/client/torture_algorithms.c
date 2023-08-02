@@ -718,6 +718,23 @@ static void torture_algorithms_ecdh_curve25519_sha256_libssh_org(void **state) {
 }
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
 
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+static void
+torture_algorithms_ecdh_sntrup761x25519_sha512_openssh_com(void **state)
+{
+    struct torture_state *s = *state;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "sntrup761x25519-sha512@openssh.com",
+                   NULL /*cipher*/,
+                   NULL /*hmac*/);
+}
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
+
 static void torture_algorithms_dh_group1(void **state) {
     struct torture_state *s = *state;
 
@@ -985,6 +1002,11 @@ int torture_run_tests(void) {
                                         session_setup,
                                         session_teardown),
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+        cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sntrup761x25519_sha512_openssh_com,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
 #if defined(HAVE_ECC)
         cmocka_unit_test_setup_teardown(torture_algorithms_ecdh_sha2_nistp256,
                                         session_setup,

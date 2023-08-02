@@ -48,8 +48,9 @@
 #ifdef WITH_GEX
 #include "libssh/dh-gex.h"
 #endif /* WITH_GEX */
-#include "libssh/ecdh.h"
 #include "libssh/curve25519.h"
+#include "libssh/ecdh.h"
+#include "libssh/sntrup761.h"
 
 static struct ssh_hmac_struct ssh_hmac_tab[] = {
   { "hmac-sha1",                     SSH_HMAC_SHA1,          false },
@@ -585,6 +586,11 @@ int crypt_set_algorithms_server(ssh_session session){
     case SSH_KEX_CURVE25519_SHA256:
     case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
         ssh_server_curve25519_init(session);
+        break;
+#endif
+#ifdef HAVE_SNTRUP761
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        ssh_server_sntrup761x25519_init(session);
         break;
 #endif
     default:

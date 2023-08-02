@@ -135,6 +135,7 @@ if (SSH_EXECUTABLE)
         diffie-hellman-group1-sha1 diffie-hellman-group14-sha1 diffie-hellman-group14-sha256
         diffie-hellman-group16-sha512 diffie-hellman-group18-sha512 diffie-hellman-group-exchange-sha1
         diffie-hellman-group-exchange-sha256 ecdh-sha2-nistp256 ecdh-sha2-nistp384 ecdh-sha2-nistp521
+        sntrup761x25519-sha512@openssh.com
         curve25519-sha256 curve25519-sha256@libssh.org
         ssh-ed25519 ssh-ed25519-cert-v01@openssh.com ssh-rsa
         ecdsa-sha2-nistp256 ecdsa-sha2-nistp384 ecdsa-sha2-nistp521

@@ -40,6 +40,7 @@
 #include "libssh/ssh2.h"
 #include "libssh/string.h"
 #include "libssh/curve25519.h"
+#include "libssh/sntrup761.h"
 #include "libssh/knownhosts.h"
 #include "libssh/misc.h"
 #include "libssh/pki.h"
@@ -94,6 +95,12 @@
 #else
 #define CURVE25519 ""
 #endif /* HAVE_CURVE25519 */
+
+#ifdef HAVE_SNTRUP761
+#define SNTRUP761X25519 "sntrup761x25519-sha512@openssh.com,"
+#else
+#define SNTRUP761X25519 ""
+#endif /* HAVE_SNTRUP761 */
 
 #ifdef HAVE_ECC
 #define ECDH "ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,"
@@ -159,6 +166,7 @@
 
 #define DEFAULT_KEY_EXCHANGE \
     CURVE25519 \
+    SNTRUP761X25519 \
     ECDH \
     "diffie-hellman-group18-sha512,diffie-hellman-group16-sha512," \
     GEX_SHA256 \
@@ -894,6 +902,8 @@ kex_select_kex_type(const char *kex)
         return SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG;
     } else if (strcmp(kex, "curve25519-sha256") == 0) {
         return SSH_KEX_CURVE25519_SHA256;
+    } else if (strcmp(kex, "sntrup761x25519-sha512@openssh.com") == 0) {
+        return SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM;
     }
     /* should not happen. We should be getting only valid names at this stage */
     return 0;
@@ -932,6 +942,11 @@ static void revert_kex_callbacks(ssh_session session)
     case SSH_KEX_CURVE25519_SHA256:
     case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
         ssh_client_curve25519_remove_callbacks(session);
+        break;
+#endif
+#ifdef HAVE_SNTRUP761
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        ssh_client_sntrup761x25519_remove_callbacks(session);
         break;
 #endif
     }
@@ -1475,8 +1490,35 @@ int ssh_make_sessionid(ssh_session session)
         }
         break;
 #endif /* HAVE_CURVE25519 */
+#ifdef HAVE_SNTRUP761
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+        rc = ssh_buffer_pack(buf,
+                             "dPPdPP",
+                             SNTRUP761_PUBLICKEY_SIZE + CURVE25519_PUBKEY_SIZE,
+                             (size_t)SNTRUP761_PUBLICKEY_SIZE,
+                             session->next_crypto->sntrup761_client_pubkey,
+                             (size_t)CURVE25519_PUBKEY_SIZE,
+                             session->next_crypto->curve25519_client_pubkey,
+                             SNTRUP761_CIPHERTEXT_SIZE + CURVE25519_PUBKEY_SIZE,
+                             (size_t)SNTRUP761_CIPHERTEXT_SIZE,
+                             session->next_crypto->sntrup761_ciphertext,
+                             (size_t)CURVE25519_PUBKEY_SIZE,
+                             session->next_crypto->curve25519_server_pubkey);
+
+        if (rc != SSH_OK) {
+            goto error;
+        }
+        break;
+#endif /* HAVE_SNTRUP761 */
     }
-    rc = ssh_buffer_pack(buf, "B", session->next_crypto->shared_secret);
+    if (session->next_crypto->kex_type == SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM) {
+        rc = ssh_buffer_pack(buf,
+                             "F",
+                             session->next_crypto->shared_secret,
+                             SHA512_DIGEST_LEN);
+    } else {
+        rc = ssh_buffer_pack(buf, "B", session->next_crypto->shared_secret);
+    }
     if (rc != SSH_OK) {
         goto error;
     }
@@ -1532,6 +1574,7 @@ int ssh_make_sessionid(ssh_session session)
     case SSH_KEX_DH_GROUP16_SHA512:
     case SSH_KEX_DH_GROUP18_SHA512:
     case SSH_KEX_ECDH_SHA2_NISTP521:
+    case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
         session->next_crypto->digest_len = SHA512_DIGEST_LENGTH;
         session->next_crypto->digest_type = SSH_KDF_SHA512;
         session->next_crypto->secret_hash = malloc(session->next_crypto->digest_len);
@@ -1668,7 +1711,12 @@ int ssh_generate_session_keys(ssh_session session)
     size_t intkey_srv_to_cli_len = 0;
     int rc = -1;
 
-    k_string = ssh_make_bignum_string(crypto->shared_secret);
+    if (session->next_crypto->kex_type == SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM) {
+        k_string = ssh_make_padded_bignum_string(crypto->shared_secret,
+                                                 SHA512_DIGEST_LEN);
+    } else {
+        k_string = ssh_make_bignum_string(crypto->shared_secret);
+    }
     if (k_string == NULL) {
         ssh_set_error_oom(session);
         goto error;

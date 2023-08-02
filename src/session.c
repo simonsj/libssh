@@ -449,6 +449,8 @@ const char* ssh_get_kex_algo(ssh_session session) {
            return "curve25519-sha256";
         case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
             return "curve25519-sha256@libssh.org";
+        case SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM:
+            return "sntrup761x25519-sha512@openssh.com";
         default:
             break;
     }

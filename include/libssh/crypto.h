@@ -45,10 +45,11 @@
 #ifdef HAVE_OPENSSL_ECDH_H
 #include <openssl/ecdh.h>
 #endif
+#include "libssh/curve25519.h"
 #include "libssh/dh.h"
 #include "libssh/ecdh.h"
 #include "libssh/kex.h"
-#include "libssh/curve25519.h"
+#include "libssh/sntrup761.h"
 
 #define DIGEST_MAX_LEN 64
 
@@ -82,6 +83,8 @@ enum ssh_key_exchange_e {
     SSH_KEX_DH_GROUP18_SHA512,
     /* diffie-hellman-group14-sha256 */
     SSH_KEX_DH_GROUP14_SHA256,
+    /* sntrup761x25519-sha512@openssh.com */
+    SSH_KEX_SNTRUP761X25519_SHA512_OPENSSH_COM,
 };
 
 enum ssh_cipher_e {
@@ -132,6 +135,11 @@ struct ssh_crypto_struct {
 #endif
     ssh_curve25519_pubkey curve25519_client_pubkey;
     ssh_curve25519_pubkey curve25519_server_pubkey;
+#endif
+#ifdef HAVE_SNTRUP761
+    ssh_sntrup761_privkey sntrup761_privkey;
+    ssh_sntrup761_pubkey sntrup761_client_pubkey;
+    ssh_sntrup761_ciphertext sntrup761_ciphertext;
 #endif
     ssh_string dh_server_signature; /* information used by dh_handshake. */
     size_t session_id_len;

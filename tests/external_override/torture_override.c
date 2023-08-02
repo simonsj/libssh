@@ -255,6 +255,37 @@ static void torture_override_ecdh_curve25519_sha256_libssh_org(void **state)
 }
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
 
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+static void
+torture_override_ecdh_sntrup761x25519_sha512_openssh_com(void **state)
+{
+    struct torture_state *s = *state;
+    bool internal_curve25519_called;
+
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
+    test_algorithm(s->ssh.session,
+                   "sntrup761x25519-sha512@openssh.com",
+                   NULL, /* cipher */
+                   NULL  /* hostkey */);
+
+    internal_curve25519_called = internal_curve25519_function_called();
+
+    /* TODO: when non-internal sntrup761 is supported, this is a good
+       place to add override checks of the sntrup761-related functions
+       too. Currently none of our external crypto libraries supports
+       sntrup761. */
+
+#if SHOULD_CALL_INTERNAL_CURVE25519
+    assert_true(internal_curve25519_called);
+#else
+    assert_false(internal_curve25519_called);
+#endif
+}
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
+
 #ifdef OPENSSH_SSH_ED25519
 static void torture_override_ed25519(void **state)
 {
@@ -299,6 +330,11 @@ int torture_run_tests(void)
                                         session_setup,
                                         session_teardown),
 #endif /* OPENSSH_CURVE25519_SHA256_LIBSSH_ORG */
+#ifdef OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM
+        cmocka_unit_test_setup_teardown(torture_override_ecdh_sntrup761x25519_sha512_openssh_com,
+                                        session_setup,
+                                        session_teardown),
+#endif /* OPENSSH_SNTRUP761X25519_SHA512_OPENSSH_COM */
 #ifdef OPENSSH_SSH_ED25519
         cmocka_unit_test_setup_teardown(torture_override_ed25519,
                                         session_setup,

@@ -87,6 +87,7 @@ set(libssh_SRCS
   connector.c
   crypto_common.c
   curve25519.c
+  sntrup761.c
   dh.c
   ecdh.c
   error.c
@@ -119,6 +120,7 @@ set(libssh_SRCS
   wrapper.c
   external/bcrypt_pbkdf.c
   external/blowfish.c
+  external/sntrup761.c
   config_parser.c
   token.c
   pki_ed25519_common.c
