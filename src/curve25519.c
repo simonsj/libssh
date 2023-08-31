@@ -56,7 +56,8 @@ static struct ssh_packet_callbacks_struct ssh_curve25519_client_callbacks = {
     .user = NULL
 };
 
-static int ssh_curve25519_init(ssh_session session)
+int
+ssh_curve25519_init(ssh_session session)
 {
     int rc;
 #ifdef HAVE_LIBCRYPTO
