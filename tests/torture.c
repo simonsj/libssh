@@ -242,12 +242,12 @@ int torture_terminate_process(const char *pidfile)
     }
     assert_int_not_equal(pid, -1);
 
-    for (count = 0; count < 10; count++) {
+    for (count = 0; count < 500; count++) {
         /* Make sure the daemon goes away! */
         kill(pid, SIGTERM);
 
-        /* 10 ms */
-        usleep(10 * 1000);
+        /* 25 ms */
+        usleep(25 * 1000);
 #ifdef HAVE_VALGRIND_VALGRIND_H
         if (RUNNING_ON_VALGRIND) {
             SSH_LOG(SSH_LOG_INFO, "Running within Valgrind, wait one more "
