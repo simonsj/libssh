@@ -51,6 +51,7 @@ typedef unsigned char ssh_curve25519_pubkey[CURVE25519_PUBKEY_SIZE];
 typedef unsigned char ssh_curve25519_privkey[CURVE25519_PRIVKEY_SIZE];
 
 int ssh_curve25519_init(ssh_session session);
+int ssh_curve25519_create_k(ssh_session session, ssh_curve25519_pubkey k);
 
 int ssh_client_curve25519_init(ssh_session session);
 void ssh_client_curve25519_remove_callbacks(ssh_session session);

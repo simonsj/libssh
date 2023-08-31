@@ -56,8 +56,7 @@ static struct ssh_packet_callbacks_struct ssh_curve25519_client_callbacks = {
     .user = NULL
 };
 
-int
-ssh_curve25519_init(ssh_session session)
+int ssh_curve25519_init(ssh_session session)
 {
     int rc;
 #ifdef HAVE_LIBCRYPTO
@@ -165,14 +164,12 @@ void ssh_client_curve25519_remove_callbacks(ssh_session session)
     ssh_packet_remove_callbacks(session, &ssh_curve25519_client_callbacks);
 }
 
-static int ssh_curve25519_build_k(ssh_session session)
+int ssh_curve25519_create_k(ssh_session session, ssh_curve25519_pubkey k)
 {
-    ssh_curve25519_pubkey k;
-
 #ifdef HAVE_LIBCRYPTO
     EVP_PKEY_CTX *pctx = NULL;
     EVP_PKEY *pkey = NULL, *pubkey = NULL;
-    size_t shared_key_len = sizeof(k);
+    size_t shared_key_len = CURVE25519_PUBKEY_SIZE;
     int rc, ret = SSH_ERROR;
 
     pkey = session->next_crypto->curve25519_privkey;
@@ -247,20 +244,38 @@ out:
     }
 #endif /* HAVE_LIBCRYPTO */
 
+#ifdef DEBUG_CRYPTO
+    ssh_log_hexdump("Session server cookie",
+                    session->next_crypto->server_kex.cookie,
+                    16);
+    ssh_log_hexdump("Session client cookie",
+                    session->next_crypto->client_kex.cookie,
+                    16);
+#endif
+
+    return 0;
+}
+
+static int ssh_curve25519_build_k(ssh_session session)
+{
+    ssh_curve25519_pubkey k;
+    int rc;
+
+    rc = ssh_curve25519_create_k(session, k);
+    if (rc != SSH_OK) {
+        return rc;
+    }
+
     bignum_bin2bn(k, CURVE25519_PUBKEY_SIZE, &session->next_crypto->shared_secret);
     if (session->next_crypto->shared_secret == NULL) {
         return SSH_ERROR;
     }
 
 #ifdef DEBUG_CRYPTO
-    ssh_log_hexdump("Session server cookie",
-                   session->next_crypto->server_kex.cookie, 16);
-    ssh_log_hexdump("Session client cookie",
-                   session->next_crypto->client_kex.cookie, 16);
     ssh_print_bignum("Shared secret key", session->next_crypto->shared_secret);
 #endif
 
-  return 0;
+    return 0;
 }
 
 /** @internal
