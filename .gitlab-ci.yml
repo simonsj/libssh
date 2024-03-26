@@ -717,3 +717,36 @@ coverity:
     when: on_failure
     paths:
       - obj/cov-int/*.txt
+
+###############################################################################
+#                                  MacOS                                      #
+###############################################################################
+.macos:
+  tags:
+    - saas-macos-medium-m1
+  image: macos-14-xcode-15
+  before_script:
+    - echo "MacOS runner started"
+    - brew update
+    - brew install cmake openssl cmocka doxygen
+    - mkdir obj && cd obj
+
+# TODO add -DFUZZ_TESTING=ON clang cant find _LLVMFuzzerInitialize on arm64
+macos-m1:
+  extends: .macos
+  variables:
+    HOMEBREW_NO_AUTO_UPDATE: 1
+    CMAKE_DEFAULT_OPTIONS: "-DCMAKE_BUILD_TYPE=RelWithDebInfo -DPICKY_DEVELOPER=ON"
+    CMAKE_BUILD_OPTIONS: "-DWITH_BLOWFISH_CIPHER=ON -DWITH_SFTP=ON -DWITH_SERVER=ON -DWITH_ZLIB=ON -DWITH_PCAP=ON -DWITH_DEBUG_CRYPTO=ON -DWITH_DEBUG_PACKET=ON -DWITH_DEBUG_CALLTRACE=ON"
+    CMAKE_TEST_OPTIONS: "-DUNIT_TESTING=ON"
+    CMAKE_OPTIONS: $CMAKE_DEFAULT_OPTIONS $CMAKE_BUILD_OPTIONS $CMAKE_TEST_OPTIONS
+  stage: test
+  script:
+    - cmake $CMAKE_OPTIONS .. &&
+      make -j$(sysctl -n hw.logicalcpu) &&
+      ctest --output-on-failure
+  artifacts:
+    expire_in: 1 week
+    when: on_failure
+    paths:
+      - obj/
