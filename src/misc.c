@@ -178,6 +178,35 @@ int ssh_gettimeofday(struct timeval *__p, void *__t)
   return (0);
 }
 
+/**
+ * @internal
+ *
+ * @brief Convert time in seconds since the Epoch to broken-down local time
+ *
+ * This is a helper used to provide localtime_r() like function interface
+ * on Windows.
+ *
+ * @param timer    Pointer to a location storing the time_t which
+ *                 represents the time in seconds since the Epoch.
+ *
+ * @param result   Pointer to a location where the broken-down time
+ *                 (expressed as local time) should be stored.
+ *
+ * @returns        A pointer to the structure pointed to by the parameter
+ *                 <tt>result</tt> on success, NULL on error with the errno
+ *                 set to indicate the error.
+ */
+struct tm *ssh_localtime(const time_t *timer, struct tm *result)
+{
+    errno_t rc;
+    rc = localtime_s(result, timer);
+    if (rc != 0) {
+        return NULL;
+    }
+
+    return result;
+}
+
 char *ssh_get_local_username(void)
 {
     DWORD size = 0;

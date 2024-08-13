@@ -34,6 +34,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <time.h>
 
 #if !defined(HAVE_STRTOULL)
 # if defined(HAVE___STRTOULL)
@@ -163,6 +164,9 @@ struct timeval;
 int ssh_gettimeofday(struct timeval *__p, void *__t);
 
 #define gettimeofday ssh_gettimeofday
+
+struct tm *ssh_localtime(const time_t *timer, struct tm *result);
+# define localtime_r ssh_localtime
 
 #define _XCLOSESOCKET closesocket
 
