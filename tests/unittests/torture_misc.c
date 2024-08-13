@@ -110,6 +110,120 @@ static void torture_ntohll(void **state) {
     assert_true(value == check);
 }
 
+/**
+ * @brief Compare fields of two (struct tm) type structures.
+ *
+ * @param[in] a Pointer to the first structure to compare
+ *
+ * @param[in] b Pointer to the second structure to compare
+ *
+ * @returns -1 on error
+ * @returns 0 if the fields of the structures are the same
+ * @returns 1 if the fields of the structures are not the same
+ */
+static int tm_cmp(const struct tm *a, const struct tm *b)
+{
+    if (a == NULL || b == NULL) {
+        return -1;
+    }
+
+    return !(a->tm_sec == b->tm_sec &&
+             a->tm_min == b->tm_min &&
+             a->tm_hour == b->tm_hour &&
+             a->tm_mday == b->tm_mday &&
+             a->tm_mon == b->tm_mon &&
+             a->tm_year == b->tm_year &&
+             a->tm_wday == b->tm_wday &&
+             a->tm_yday == b->tm_yday &&
+             a->tm_isdst == b->tm_isdst);
+}
+
+/**
+ * @brief Validate that localtime_r() works properly.
+ *
+ * This test is mainly to check that the libssh implementation of
+ * localtime_r() on Windows works properly (Windows does not provide
+ * localtime_r())
+ */
+static void torture_localtime_r(UNUSED_PARAM(void **state))
+{
+    /*
+     * The tm_wday and tm_yday fields of tm1 and tm2 would be filled
+     * appropriately due to the mktime() call further in the test.
+     */
+
+    /* Linux release date: 17/09/1991 (random time: 02:01:00) */
+    struct tm tm1 = {.tm_sec = 0,
+                     .tm_min = 1,
+                     .tm_hour = 2,
+                     .tm_mday = 17,
+                     .tm_mon = 9 - 1,
+                     .tm_year = 1991 - 1900,
+                     .tm_isdst = 0};
+
+    /* Windows release date: 20/11/1985 (random time 05:04:03) */
+    struct tm tm2 = {.tm_sec = 3,
+                     .tm_min = 4,
+                     .tm_hour = 5,
+                     .tm_mday = 20,
+                     .tm_mon = 11 - 1,
+                     .tm_year = 1985 - 1900,
+                     .tm_isdst = 0};
+
+    time_t t1, t2;
+    struct tm *static_tm_ptr = NULL, *tm_ptr = NULL;
+    struct tm our_tm = {0};
+    int cmp;
+
+    /*
+     * Convert time represented as (struct tm) to time represented as
+     * a (time_t)
+     */
+    t1 = mktime(&tm1);
+    assert_int_not_equal(t1, (time_t)-1);
+
+    t2 = mktime(&tm2);
+    assert_int_not_equal(t2, (time_t)-1);
+
+    /* Test that localtime_r() gives the correct broken down time */
+    tm_ptr = localtime_r(&t1, &our_tm);
+    assert_ptr_equal(tm_ptr, &our_tm);
+
+    cmp = tm_cmp(&our_tm, &tm1);
+    assert_int_equal(cmp, 0);
+
+    /*
+     * Test that localtime_r() does not modify the static structure used by
+     * localtime(). (This is an attempt to test that the localtime_r()
+     * implementation does not use localtime() internally)
+     *
+     * To test this, we first use localtime() on some time, then use
+     * localtime_r() on another time and then validate that the time
+     * corresponding to the pointer (to the static structure) returned by
+     * the first localtime() call does not change.
+     */
+    static_tm_ptr = localtime(&t1);
+    assert_non_null(static_tm_ptr);
+
+    cmp = tm_cmp(static_tm_ptr, &tm1);
+    assert_int_equal(cmp, 0);
+
+    tm_ptr = localtime_r(&t2, &our_tm);
+    assert_ptr_equal(tm_ptr, &our_tm);
+
+    cmp = tm_cmp(static_tm_ptr, &tm1);
+    assert_int_equal(cmp, 0);
+
+    /*
+     * Ideally, it should be checked that the localtime_r() implementation
+     * is thread safe by testing it under multiple threads, but we are not
+     * checking that as of now. This is because we trust localtime_r() provided
+     * by POSIX systems to be thread safe and the libssh implementation of
+     * localtime_r() on Windows should be a simple wrapper around Windows's
+     * localtime_s() which should also be thread safe.
+     */
+}
+
 #ifdef _WIN32
 
 static void torture_path_expand_tilde_win(void **state) {
@@ -1136,6 +1250,7 @@ int torture_run_tests(void) {
         cmocka_unit_test(torture_basename),
         cmocka_unit_test(torture_dirname),
         cmocka_unit_test(torture_ntohll),
+        cmocka_unit_test(torture_localtime_r),
 #ifdef _WIN32
         cmocka_unit_test(torture_path_expand_tilde_win),
 #else
