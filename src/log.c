@@ -59,7 +59,7 @@ static int current_timestring(int hires, char *buf, size_t len)
 {
     char tbuf[64];
     struct timeval tv;
-    struct tm *tm;
+    struct tm *tm = NULL;
     time_t t;
 
     gettimeofday(&tv, NULL);
@@ -71,10 +71,10 @@ static int current_timestring(int hires, char *buf, size_t len)
     }
 
     if (hires) {
-        strftime(tbuf, sizeof(tbuf) - 1, "%Y/%m/%d %H:%M:%S", tm);
+        strftime(tbuf, sizeof(tbuf), "%Y/%m/%d %H:%M:%S", tm);
         snprintf(buf, len, "%s.%06ld", tbuf, (long)tv.tv_usec);
     } else {
-        strftime(tbuf, sizeof(tbuf) - 1, "%Y/%m/%d %H:%M:%S", tm);
+        strftime(tbuf, sizeof(tbuf), "%Y/%m/%d %H:%M:%S", tm);
         snprintf(buf, len, "%s", tbuf);
     }
 
