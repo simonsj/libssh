@@ -30,10 +30,10 @@
 #define _LIBSSH_PRIV_H
 
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <time.h>
 
 #if !defined(HAVE_STRTOULL)
