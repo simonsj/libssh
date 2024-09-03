@@ -39,6 +39,8 @@
 #include "test_server.h"
 #include "default_cb.h"
 
+#include "channels.c"
+
 #define TORTURE_KNOWN_HOSTS_FILE "libssh_torture_knownhosts"
 
 const char template[] = "temp_dir_XXXXXX";
@@ -379,6 +381,51 @@ static void torture_server_unknown_global_request(void **state)
     ssh_channel_close(channel);
 }
 
+static void torture_server_unknown_channel_request(void **state)
+{
+    struct test_server_st *tss = *state;
+    struct torture_state *s = NULL;
+    ssh_session session = NULL;
+    ssh_channel channel;
+    int rc;
+
+    assert_non_null(tss);
+
+    s = tss->state;
+    assert_non_null(s);
+
+    session = s->ssh.session;
+    assert_non_null(session);
+
+    rc = ssh_options_set(session, SSH_OPTIONS_USER, SSHD_DEFAULT_USER);
+    assert_int_equal(rc, SSH_OK);
+
+    rc = ssh_connect(session);
+    assert_int_equal(rc, SSH_OK);
+
+    /* Using the default password for the server */
+    rc = ssh_userauth_password(session, NULL, SSHD_DEFAULT_PASSWORD);
+    assert_int_equal(rc, SSH_AUTH_SUCCESS);
+
+    /* Open a channel session */
+    channel = ssh_channel_new(session);
+    assert_non_null(channel);
+
+    rc = ssh_channel_open_session(channel);
+    assert_ssh_return_code(session, rc);
+
+    /* Request asking for reply */
+    rc = channel_request(channel, "unknown-request-00@test.com", NULL, 1);
+    assert_ssh_return_code_equal(session, rc, SSH_ERROR);
+
+    /* Request and don't ask for reply */
+    rc = channel_request(channel, "another-bad-req-00@test.com", NULL, 0);
+    assert_ssh_return_code(session, rc);
+
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
+}
+
 static void torture_server_no_more_sessions(void **state)
 {
     struct test_server_st *tss = *state;
@@ -507,6 +554,9 @@ int torture_run_tests(void) {
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_unknown_global_request,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_server_unknown_channel_request,
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_server_no_more_sessions,
