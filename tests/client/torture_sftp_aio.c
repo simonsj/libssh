@@ -495,6 +495,229 @@ static void torture_sftp_aio_write_negative(void **state)
     sftp_limits_free(li);
 }
 
+/*
+ * Test that waiting for read responses in an order different from the
+ * sending order of corresponding read requests works properly.
+ *
+ * (For example, if Requests Rq1 and Rq2 have responses Rs1 and Rs2
+ * respectively, and Rq1 is sent first followed by Rq2. Then waiting for
+ * response Rs2 first and then Rs1 should work properly)
+ */
+static void torture_sftp_aio_read_unordered_wait(void **state)
+{
+    struct torture_state *s = *state;
+    struct torture_sftp *t = s->ssh.tsftp;
+
+    sftp_file file = NULL;
+    sftp_aio aio_1 = NULL, aio_2 = NULL;
+    ssize_t bytes_requested, bytes_read;
+
+    struct {
+        /* buffer to store read data */
+        char *buf;
+
+        /* buffer to store data expected to be read */
+        char *expected;
+
+        /*
+         * length of the data to read. Keep this length small enough so that we
+         * don't get short reads due to the sftp limits.
+         */
+        size_t len;
+    } r1 = {0}, r2 = {0};
+
+    int fd, rc;
+
+    /* Initialize r1 */
+    r1.len = 10;
+
+    r1.buf = calloc(r1.len, 1);
+    assert_non_null(r1.buf);
+
+    r1.expected = calloc(r1.len, 1);
+    assert_non_null(r1.expected);
+
+    /* Initialize r2 */
+    r2.len = 20;
+
+    r2.buf = calloc(r2.len, 1);
+    assert_non_null(r2.buf);
+
+    r2.expected = calloc(r2.len, 1);
+    assert_non_null(r2.expected);
+
+    /* Get data that is expected to be read from the file */
+    fd = open(SSH_EXECUTABLE, O_RDONLY, 0);
+    assert_int_not_equal(fd, -1);
+
+    bytes_read = read(fd, r1.expected, r1.len);
+    assert_int_equal(bytes_read, r1.len);
+
+    bytes_read = read(fd, r2.expected, r2.len);
+    assert_int_equal(bytes_read, r2.len);
+
+    /* Open an sftp file for reading */
+    file = sftp_open(t->sftp, SSH_EXECUTABLE, O_RDONLY, 0);
+    assert_non_null(file);
+
+    /*
+     * Issue 2 consecutive read requests (send the second request immediately
+     * after sending the first without waiting for the first's response)
+     */
+    bytes_requested = sftp_aio_begin_read(file, r1.len, &aio_1);
+    assert_int_equal(bytes_requested, r1.len);
+
+    bytes_requested = sftp_aio_begin_read(file, r2.len, &aio_2);
+    assert_int_equal(bytes_requested, r2.len);
+
+    /*
+     * Wait for the responses in opposite order (Instead of waiting for response
+     * 1 first and then response 2, wait for response 2 first and then wait for
+     * response 1)
+     */
+    bytes_read = sftp_aio_wait_read(&aio_2, r2.buf, r2.len);
+    assert_int_equal(bytes_read, r2.len);
+    assert_memory_equal(r2.buf, r2.expected, r2.len);
+
+    bytes_read = sftp_aio_wait_read(&aio_1, r1.buf, r1.len);
+    assert_int_equal(bytes_read, r1.len);
+    assert_memory_equal(r1.buf, r1.expected, r1.len);
+
+    /* Clean up */
+    sftp_close(file);
+
+    rc = close(fd);
+    assert_int_equal(rc, 0);
+
+    free(r2.expected);
+    free(r2.buf);
+
+    free(r1.expected);
+    free(r1.buf);
+}
+
+/*
+ * Test that waiting for write responses in an order different from the
+ * sending order of corresponding write requests works properly.
+ *
+ * (For example, if Requests Rq1 and Rq2 have responses Rs1 and Rs2
+ * respectively, and Rq1 is sent first followed by Rq2. Then waiting for
+ * response Rs2 first and then Rs1 should work properly)
+ */
+static void torture_sftp_aio_write_unordered_wait(void **state)
+{
+    struct torture_state *s = *state;
+    struct torture_sftp *t = s->ssh.tsftp;
+
+    char file_path[128] = {0};
+    sftp_file file = NULL;
+    sftp_aio aio_1 = NULL, aio_2 = NULL;
+    ssize_t bytes_requested, bytes_written, bytes_read;
+    size_t i;
+    int rc, fd;
+
+    struct {
+        /*
+         * length of the data to write. Keep this length small enough so that we
+         * don't get short writes due to the sftp limits
+         */
+        size_t len;
+
+        /* data to write */
+        char *data;
+
+        /* buffer used to validate the written data */
+        char *buf;
+    } r1 = {0}, r2 = {0};
+
+    /* Initialize r1 */
+    r1.len = 10;
+
+    r1.data = calloc(r1.len, 1);
+    assert_non_null(r1.data);
+
+    for (i = 0; i < r1.len; ++i) {
+        r1.data[i] = (char)rand();
+    }
+
+    r1.buf = calloc(r1.len, 1);
+    assert_non_null(r1.buf);
+
+    /* Initialize r2 */
+    r2.len = 20;
+
+    r2.data = calloc(r2.len, 1);
+    assert_non_null(r2.data);
+
+    for (i = 0; i < r2.len; ++i) {
+        r2.data[i] = (char)rand();
+    }
+
+    r2.buf = calloc(r2.len, 1);
+    assert_non_null(r2.buf);
+
+    /* Open an sftp file for writing */
+    snprintf(file_path,
+             sizeof(file_path),
+             "%s/libssh_sftp_aio_write_unordered_wait",
+             t->testdir);
+    file = sftp_open(t->sftp, file_path, O_CREAT | O_WRONLY, 0777);
+    assert_non_null(file);
+
+    /*
+     * Issue two consecutive write requests (send the second request immediately
+     * after sending the first without waiting for the first's response)
+     */
+    bytes_requested = sftp_aio_begin_write(file, r1.data, r1.len, &aio_1);
+    assert_int_equal(bytes_requested, r1.len);
+
+    bytes_requested = sftp_aio_begin_write(file, r2.data, r2.len, &aio_2);
+    assert_int_equal(bytes_requested, r2.len);
+
+    /*
+     * Wait for the responses in opposite order (Instead of waiting for response
+     * 1 first and then response 2, wait for response 2 first and then wait for
+     * response 1)
+     */
+    bytes_written = sftp_aio_wait_write(&aio_2);
+    assert_int_equal(bytes_written, r2.len);
+
+    bytes_written = sftp_aio_wait_write(&aio_1);
+    assert_int_equal(bytes_written, r1.len);
+
+    /*
+     * Validate that the data has been written to the file correctly by reading
+     * from the file.
+     */
+    fd = open(file_path, O_RDONLY, 0);
+    assert_int_not_equal(fd, -1);
+
+    /* Validate that write request 1's data has been written to file */
+    bytes_read = read(fd, r1.buf, r1.len);
+    assert_int_equal(bytes_read, r1.len);
+    assert_memory_equal(r1.data, r1.buf, r1.len);
+
+    /* Validate that write request 2's data has been written to file */
+    bytes_read = read(fd, r2.buf, r2.len);
+    assert_int_equal(bytes_read, r2.len);
+    assert_memory_equal(r2.data, r2.buf, r2.len);
+
+    /* Clean up */
+    rc = close(fd);
+    assert_int_equal(rc, 0);
+
+    sftp_close(file);
+
+    rc = unlink(file_path);
+    assert_int_equal(rc, 0);
+
+    free(r2.buf);
+    free(r2.data);
+
+    free(r1.buf);
+    free(r1.data);
+}
+
 int torture_run_tests(void)
 {
     int rc;
@@ -520,6 +743,14 @@ int torture_run_tests(void)
                                         session_teardown),
 
         cmocka_unit_test_setup_teardown(torture_sftp_aio_write_negative,
+                                        session_setup,
+                                        session_teardown),
+
+        cmocka_unit_test_setup_teardown(torture_sftp_aio_read_unordered_wait,
+                                        session_setup,
+                                        session_teardown),
+
+        cmocka_unit_test_setup_teardown(torture_sftp_aio_write_unordered_wait,
                                         session_setup,
                                         session_teardown),
     };
