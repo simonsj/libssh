@@ -701,12 +701,9 @@ sftp_dir sftp_opendir(sftp_session sftp, const char *path)
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            /* something nasty has happened */
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     switch (msg->packet_type) {
@@ -798,12 +795,9 @@ sftp_attributes sftp_readdir(sftp_session sftp, sftp_dir dir)
         SSH_LOG(SSH_LOG_PACKET,
                 "Sent a ssh_fxp_readdir with id %" PRIu32, id);
 
-        while (msg == NULL) {
-            if (sftp_read_and_dispatch(sftp) < 0) {
-                /* something nasty has happened */
-                return NULL;
-            }
-            msg = sftp_dequeue(sftp, id);
+        rc = sftp_recv_response_msg(sftp, id, true, &msg);
+        if (rc != SSH_OK) {
+            return NULL;
         }
 
         switch (msg->packet_type){
@@ -928,12 +922,9 @@ static int sftp_handle_close(sftp_session sftp, ssh_string handle)
         return -1;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            /* something nasty has happened */
-            return -1;
-        }
-        msg = sftp_dequeue(sftp,id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
     }
 
     switch (msg->packet_type) {
@@ -1073,12 +1064,9 @@ sftp_file sftp_open(sftp_session sftp,
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            /* something nasty has happened */
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     switch (msg->packet_type) {
@@ -1197,18 +1185,17 @@ ssize_t sftp_read(sftp_file handle, void *buf, size_t count) {
   }
   SSH_BUFFER_FREE(buffer);
 
-  while (msg == NULL) {
-    if (handle->nonblocking) {
-      if (ssh_channel_poll(handle->sftp->channel, 0) == 0) {
-        /* we cannot block */
-        return 0;
-      }
-    }
-    if (sftp_read_and_dispatch(handle->sftp) < 0) {
-      /* something nasty has happened */
+  rc = sftp_recv_response_msg(handle->sftp, id, !handle->nonblocking, &msg);
+  if (rc == SSH_ERROR) {
       return -1;
-    }
-    msg = sftp_dequeue(handle->sftp, id);
+  }
+
+  if (rc == SSH_AGAIN) {
+      /*
+       * file opened in non blocking mode and the response has not arrived yet.
+       * Since we cannot block, return 0 as the number of bytes read.
+       */
+      return 0;
   }
 
   switch (msg->packet_type) {
@@ -1309,7 +1296,7 @@ int sftp_async_read(sftp_file file, void *data, uint32_t size, uint32_t id){
   sftp_message msg = NULL;
   sftp_status_message status;
   ssh_string datastring;
-  int err = SSH_OK;
+  int rc, err = SSH_OK;
   uint32_t len;
 
   if (file == NULL) {
@@ -1322,20 +1309,9 @@ int sftp_async_read(sftp_file file, void *data, uint32_t size, uint32_t id){
   }
 
   /* handle an existing request */
-  while (msg == NULL) {
-    if (file->nonblocking){
-      if (ssh_channel_poll(sftp->channel, 0) == 0) {
-        /* we cannot block */
-        return SSH_AGAIN;
-      }
-    }
-
-    if (sftp_read_and_dispatch(sftp) < 0) {
-      /* something nasty has happened */
-      return SSH_ERROR;
-    }
-
-    msg = sftp_dequeue(sftp,id);
+  rc = sftp_recv_response_msg(sftp, id, !file->nonblocking, &msg);
+  if (rc == SSH_ERROR || rc == SSH_AGAIN) {
+      return rc;
   }
 
   switch (msg->packet_type) {
@@ -1446,12 +1422,10 @@ ssize_t sftp_write(sftp_file file, const void *buf, size_t count) {
         "Could not write as much data as expected");
   }
 
-  while (msg == NULL) {
-    if (sftp_read_and_dispatch(file->sftp) < 0) {
-      /* something nasty has happened */
+  /* Wait for the response in blocking mode */
+  rc = sftp_recv_response_msg(sftp, id, true, &msg);
+  if (rc != SSH_OK) {
       return -1;
-    }
-    msg = sftp_dequeue(file->sftp, id);
   }
 
   switch (msg->packet_type) {
@@ -1558,11 +1532,9 @@ int sftp_unlink(sftp_session sftp, const char *file) {
   }
   SSH_BUFFER_FREE(buffer);
 
-  while (msg == NULL) {
-    if (sftp_read_and_dispatch(sftp)) {
+  rc = sftp_recv_response_msg(sftp, id, true, &msg);
+  if (rc != SSH_OK) {
       return -1;
-    }
-    msg = sftp_dequeue(sftp, id);
   }
 
   if (msg->packet_type == SSH_FXP_STATUS) {
@@ -1632,11 +1604,9 @@ int sftp_rmdir(sftp_session sftp, const char *directory) {
   }
   SSH_BUFFER_FREE(buffer);
 
-  while (msg == NULL) {
-    if (sftp_read_and_dispatch(sftp) < 0) {
+  rc = sftp_recv_response_msg(sftp, id, true, &msg);
+  if (rc != SSH_OK) {
       return -1;
-    }
-    msg = sftp_dequeue(sftp, id);
   }
 
   /* By specification, this command returns SSH_FXP_STATUS */
@@ -1718,11 +1688,9 @@ int sftp_mkdir(sftp_session sftp, const char *directory, mode_t mode)
         return -1;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return -1;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
     }
 
     /* By specification, this command only returns SSH_FXP_STATUS */
@@ -1842,11 +1810,9 @@ int sftp_rename(sftp_session sftp, const char *original, const char *newname)
         return -1;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return -1;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
     }
 
     /* By specification, this command only returns SSH_FXP_STATUS */
@@ -1931,11 +1897,9 @@ int sftp_setstat(sftp_session sftp, const char *file, sftp_attributes attr)
         return -1;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return -1;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
     }
 
     /* By specification, this command only returns SSH_FXP_STATUS */
@@ -2016,11 +1980,9 @@ sftp_lsetstat(sftp_session sftp, const char *file, sftp_attributes attr)
         return -1;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return -1;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
     }
 
     /* By specification, this command only returns SSH_FXP_STATUS */
@@ -2156,11 +2118,9 @@ int sftp_symlink(sftp_session sftp, const char *target, const char *dest)
   }
   SSH_BUFFER_FREE(buffer);
 
-  while (msg == NULL) {
-    if (sftp_read_and_dispatch(sftp) < 0) {
+  rc = sftp_recv_response_msg(sftp, id, true, &msg);
+  if (rc != SSH_OK) {
       return -1;
-    }
-    msg = sftp_dequeue(sftp, id);
   }
 
   /* By specification, this command only returns SSH_FXP_STATUS */
@@ -2244,11 +2204,9 @@ char *sftp_readlink(sftp_session sftp, const char *path)
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_NAME) {
@@ -2336,11 +2294,9 @@ int sftp_hardlink(sftp_session sftp, const char *oldpath, const char *newpath)
         return -1;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return -1;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
     }
 
     /* By specification, this command only returns SSH_FXP_STATUS */
@@ -2459,11 +2415,9 @@ sftp_statvfs_t sftp_statvfs(sftp_session sftp, const char *path)
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_EXTENDED_REPLY) {
@@ -2533,15 +2487,10 @@ int sftp_fsync(sftp_file file)
         goto done;
     }
 
-    do {
-        rc = sftp_read_and_dispatch(sftp);
-        if (rc < 0) {
-            ssh_set_error_oom(sftp->session);
-            rc = -1;
-            goto done;
-        }
-        msg = sftp_dequeue(sftp, id);
-    } while (msg == NULL);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
+    }
 
     /* By specification, this command only returns SSH_FXP_STATUS */
     if (msg->packet_type == SSH_FXP_STATUS) {
@@ -2634,11 +2583,9 @@ sftp_statvfs_t sftp_fstatvfs(sftp_file file)
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc == -1) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_EXTENDED_REPLY) {
@@ -2747,11 +2694,9 @@ static sftp_limits_t sftp_limits_use_extension(sftp_session sftp)
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_EXTENDED_REPLY) {
@@ -2897,11 +2842,9 @@ char *sftp_canonicalize_path(sftp_session sftp, const char *path)
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc == -1) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_NAME) {
@@ -2988,11 +2931,9 @@ static sftp_attributes sftp_xstat(sftp_session sftp,
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_ATTRS) {
@@ -3066,11 +3007,9 @@ sftp_attributes sftp_fstat(sftp_file file)
         return NULL;
     }
 
-    while (msg == NULL) {
-        if (sftp_read_and_dispatch(file->sftp) < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(file->sftp, id);
+    rc = sftp_recv_response_msg(file->sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_ATTRS){
@@ -3146,12 +3085,9 @@ char *sftp_expand_path(sftp_session sftp, const char *path)
         return NULL;
     }
 
-    while (msg == NULL) {
-        rc = sftp_read_and_dispatch(sftp);
-        if (rc < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_NAME) {
@@ -3233,12 +3169,9 @@ sftp_home_directory(sftp_session sftp, const char *username)
         return NULL;
     }
 
-    while (msg == NULL) {
-        rc = sftp_read_and_dispatch(sftp);
-        if (rc < 0) {
-            return NULL;
-        }
-        msg = sftp_dequeue(sftp, id);
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return NULL;
     }
 
     if (msg->packet_type == SSH_FXP_NAME) {

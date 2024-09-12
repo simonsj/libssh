@@ -859,6 +859,56 @@ int sftp_read_and_dispatch(sftp_session sftp)
     return 0;
 }
 
+int sftp_recv_response_msg(sftp_session sftp,
+                           uint32_t id,
+                           bool blocking,
+                           sftp_message *msg_ptr)
+{
+    sftp_message msg = NULL;
+    int rc;
+
+    if (sftp == NULL) {
+        return SSH_ERROR;
+    }
+
+    if (msg_ptr == NULL) {
+        ssh_set_error_invalid(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return SSH_ERROR;
+    }
+
+    SSH_LOG(SSH_LOG_PACKET,
+            "Trying to receive response of request id %" PRIu32 " in %s mode",
+            id,
+            blocking ? "blocking" : "non-blocking");
+
+    do {
+        if (!blocking) {
+            rc = ssh_channel_poll(sftp->channel, 0);
+            if (rc == SSH_ERROR) {
+                sftp_set_error(sftp, SSH_FX_FAILURE);
+                return SSH_ERROR;
+            }
+
+            if (rc == 0) {
+                /* nothing available and we cannot block */
+                return SSH_AGAIN;
+            }
+        }
+
+        rc = sftp_read_and_dispatch(sftp);
+        if (rc == -1) {
+            /* something nasty has happened */
+            return SSH_ERROR;
+        }
+
+        msg = sftp_dequeue(sftp, id);
+    } while (msg == NULL);
+
+    *msg_ptr = msg;
+    return SSH_OK;
+}
+
 sftp_status_message parse_status_msg(sftp_message msg)
 {
     sftp_status_message status = NULL;

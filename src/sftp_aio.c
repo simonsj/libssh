@@ -202,21 +202,15 @@ ssize_t sftp_aio_wait_read(sftp_aio *aio,
     }
 
     /* handle an existing request */
-    while (msg == NULL) {
-        if (file->nonblocking) {
-            if (ssh_channel_poll(sftp->channel, 0) == 0) {
-                /* we cannot block */
-                return SSH_AGAIN;
-            }
-        }
+    rc = sftp_recv_response_msg(sftp, (*aio)->id, !file->nonblocking, &msg);
+    if (rc == SSH_ERROR) {
+        SFTP_AIO_FREE(*aio);
+        return SSH_ERROR;
+    }
 
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            /* something nasty has happened */
-            SFTP_AIO_FREE(*aio);
-            return SSH_ERROR;
-        }
-
-        msg = sftp_dequeue(sftp, (*aio)->id);
+    if (rc == SSH_AGAIN) {
+        /* return without freeing the (*aio) */
+        return SSH_AGAIN;
     }
 
     /*
@@ -410,6 +404,7 @@ ssize_t sftp_aio_wait_write(sftp_aio *aio)
     sftp_session sftp = NULL;
     sftp_message msg = NULL;
     sftp_status_message status = NULL;
+    int rc;
 
     /*
      * This function releases the memory of the structure
@@ -446,21 +441,15 @@ ssize_t sftp_aio_wait_write(sftp_aio *aio)
         return SSH_ERROR;
     }
 
-    while (msg == NULL) {
-        if (file->nonblocking) {
-            if (ssh_channel_poll(sftp->channel, 0) == 0) {
-                /* we cannot block */
-                return SSH_AGAIN;
-            }
-        }
+    rc = sftp_recv_response_msg(sftp, (*aio)->id, !file->nonblocking, &msg);
+    if (rc == SSH_ERROR) {
+        SFTP_AIO_FREE(*aio);
+        return SSH_ERROR;
+    }
 
-        if (sftp_read_and_dispatch(sftp) < 0) {
-            /* something nasty has happened */
-            SFTP_AIO_FREE(*aio);
-            return SSH_ERROR;
-        }
-
-        msg = sftp_dequeue(sftp, (*aio)->id);
+    if (rc == SSH_AGAIN) {
+        /* Return without freeing the (*aio) */
+        return SSH_AGAIN;
     }
 
     /*
