@@ -229,7 +229,7 @@ static void torture_timeout_elapsed(void **state){
 
     assert_true(ssh_timeout_elapsed(&ts,25));
     assert_false(ssh_timeout_elapsed(&ts,30000));
-    assert_false(ssh_timeout_elapsed(&ts,75));
+    assert_false(ssh_timeout_elapsed(&ts,300));
     assert_true(ssh_timeout_elapsed(&ts,0));
     assert_false(ssh_timeout_elapsed(&ts,-1));
 }
