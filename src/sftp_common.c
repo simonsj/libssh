@@ -882,7 +882,47 @@ int sftp_recv_response_msg(sftp_session sftp,
             id,
             blocking ? "blocking" : "non-blocking");
 
-    do {
+    /*
+     * We deliberately check the queue first for the response before
+     * polling/blocking on the channel. The reason for this approach is
+     * explained by the following example (And a similar scenario can occur when
+     * the async sftp aio API is used, because it provides the control of which
+     * responses to receive (and in what order) to the user via the
+     * sftp_aio_wait_*() functions)
+     *
+     * Its possible that while this function is trying to receive some
+     * specific response (based on request id), other responses have already
+     * arrived (or may arrive) before that specific response on the channel. In
+     * that case, this function would collect those other responses from the
+     * channel, add them to the sftp response queue (using
+     * sftp_read_and_dipatch()) and finally provide the caller with the
+     * required specific response.
+     *
+     * Now, whenever the caller will call this function again to get one of
+     * those other responses, it won't be on the channel, instead it would be
+     * present in the queue.
+     *
+     * Assuming that no new response ever comes on the channel, if we don't
+     * check the queue first and instead:
+     * - (In non blocking mode) poll on the channel, then we'd always get 0
+     *    bytes of data and return SSH_AGAIN.
+     * - (In blocking mode) wait on the channel, then
+     *   sftp_read_and_dispatch() would block infinitely by default if the
+     *   user has not set any timeout.
+     *
+     * Hence checking the queue for the response first and if not found there,
+     * polling/blocking on the channel is advised.
+     */
+    while (msg == NULL) {
+        /*
+         * Before trying to poll/block on the channel for data, probe the queue
+         * to check whether the response is already present in it.
+         */
+        msg = sftp_dequeue(sftp, id);
+        if (msg != NULL) {
+            break;
+        }
+
         if (!blocking) {
             rc = ssh_channel_poll(sftp->channel, 0);
             if (rc == SSH_ERROR) {
@@ -901,9 +941,7 @@ int sftp_recv_response_msg(sftp_session sftp,
             /* something nasty has happened */
             return SSH_ERROR;
         }
-
-        msg = sftp_dequeue(sftp, id);
-    } while (msg == NULL);
+    }
 
     *msg_ptr = msg;
     return SSH_OK;
