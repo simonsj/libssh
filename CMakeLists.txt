@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 include(DefineCMakeDefaults)
 include(DefineCompilerFlags)
 
-project(libssh VERSION 0.11.00 LANGUAGES C CXX)
+project(libssh VERSION 0.11.00 LANGUAGES C)
 
 # global needed variable
 set(APPLICATION_NAME ${PROJECT_NAME})
@@ -190,6 +190,7 @@ endif (WITH_SYMBOL_VERSIONING AND ABIMAP_FOUND)
 
 # Coverage
 if (WITH_COVERAGE)
+    ENABLE_LANGUAGE(CXX)
     include(CodeCoverage)
     setup_target_for_coverage_lcov(
         NAME "coverage"
