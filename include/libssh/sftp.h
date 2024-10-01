@@ -220,24 +220,30 @@ struct sftp_limits_struct {
  * with the server inside of the provided ssh session. This function call is
  * usually followed by the sftp_init(), which initializes SFTP protocol itself.
  *
- * @param session       The ssh session to use.
+ * @param session       The ssh session to use. The session *must* be in
+ *                      blocking mode since most `sftp_*` functions do not
+ *                      support the non-blocking API.
  *
  * @return              A new sftp session or NULL on error.
  *
  * @see sftp_free()
  * @see sftp_init()
+ * @see ssh_set_blocking()
  */
 LIBSSH_API sftp_session sftp_new(ssh_session session);
 
 /**
  * @brief Start a new sftp session with an existing channel.
  *
- * @param session       The ssh session to use.
+ * @param session       The ssh session to use. The session *must* be in
+ *                      blocking mode since most `sftp_*` functions do not
+ *                      support the non-blocking API.
  * @param channel		An open session channel with subsystem already allocated
  *
  * @return              A new sftp session or NULL on error.
  *
  * @see sftp_free()
+ * @see ssh_set_blocking()
  */
 LIBSSH_API sftp_session sftp_new_channel(ssh_session session, ssh_channel channel);
 
