@@ -822,7 +822,7 @@ struct sftp_handle
     char *name;
 };
 
-SSH_SFTP_CALLBACK(process_unsupposed);
+SSH_SFTP_CALLBACK(process_unsupported);
 SSH_SFTP_CALLBACK(process_open);
 SSH_SFTP_CALLBACK(process_read);
 SSH_SFTP_CALLBACK(process_write);
@@ -846,9 +846,9 @@ const struct sftp_message_handler message_handlers[] = {
     {"read", NULL, SSH_FXP_READ, process_read},
     {"write", NULL, SSH_FXP_WRITE, process_write},
     {"lstat", NULL, SSH_FXP_LSTAT, process_lstat},
-    {"fstat", NULL, SSH_FXP_FSTAT, process_unsupposed},
+    {"fstat", NULL, SSH_FXP_FSTAT, process_unsupported},
     {"setstat", NULL, SSH_FXP_SETSTAT, process_setstat},
-    {"fsetstat", NULL, SSH_FXP_FSETSTAT, process_unsupposed},
+    {"fsetstat", NULL, SSH_FXP_FSETSTAT, process_unsupported},
     {"opendir", NULL, SSH_FXP_OPENDIR, process_opendir},
     {"readdir", NULL, SSH_FXP_READDIR, process_readdir},
     {"remove", NULL, SSH_FXP_REMOVE, process_remove},
@@ -856,7 +856,7 @@ const struct sftp_message_handler message_handlers[] = {
     {"rmdir", NULL, SSH_FXP_RMDIR, process_rmdir},
     {"realpath", NULL, SSH_FXP_REALPATH, process_realpath},
     {"stat", NULL, SSH_FXP_STAT, process_stat},
-    {"rename", NULL, SSH_FXP_RENAME, process_unsupposed},
+    {"rename", NULL, SSH_FXP_RENAME, process_unsupported},
     {"readlink", NULL, SSH_FXP_READLINK, process_readlink},
     {"symlink", NULL, SSH_FXP_SYMLINK, process_symlink},
     {"init", NULL, SSH_FXP_INIT, sftp_reply_version},
@@ -1628,7 +1628,7 @@ process_remove(sftp_client_message client_msg)
 }
 
 static int
-process_unsupposed(sftp_client_message client_msg)
+process_unsupported(sftp_client_message client_msg)
 {
     sftp_reply_status(client_msg, SSH_FX_OP_UNSUPPORTED,
                       "Operation not supported");
