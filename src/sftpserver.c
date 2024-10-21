@@ -258,13 +258,11 @@ error:
 
 sftp_client_message sftp_get_client_message(sftp_session sftp)
 {
-    ssh_session session = sftp->session;
-    sftp_packet packet;
+    sftp_packet packet = NULL;
 
     packet = sftp_packet_read(sftp);
     if (packet == NULL) {
-      ssh_set_error_oom(session);
-      return NULL;
+        return NULL;
     }
     return sftp_make_client_message(sftp, packet);
 }
