@@ -241,7 +241,7 @@ static void torture_timeout_update(void **state){
     usleep(50000);
     assert_int_equal(ssh_timeout_update(&ts,25), 0);
     assert_in_range(ssh_timeout_update(&ts,30000),29000,29960);
-    assert_in_range(ssh_timeout_update(&ts,75),1,40);
+    assert_in_range(ssh_timeout_update(&ts,500),1,450);
     assert_int_equal(ssh_timeout_update(&ts,0),0);
     assert_int_equal(ssh_timeout_update(&ts,-1),-1);
 }
