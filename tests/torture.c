@@ -53,13 +53,19 @@
 #endif
 
 #define TORTURE_SSHD_SRV_IPV4 "127.0.0.10"
+#define TORTURE_SSHD_SRV1_IPV4 "127.0.0.11"
 /* socket wrapper IPv6 prefix  fd00::5357:5fxx */
 #define TORTURE_SSHD_SRV_IPV6 "fd00::5357:5f0a"
+#define TORTURE_SSHD_SRV1_IPV6 "fd00::5357:5f0b"
 #define TORTURE_SSHD_SRV_PORT 22
+#define TORTURE_SSHD_SRV_IFACE "10"
+#define TORTURE_SSHD_SRV1_IFACE "11"
 
 #define TORTURE_SOCKET_DIR "/tmp/test_socket_wrapper_XXXXXX"
 #define TORTURE_SSHD_PIDFILE "sshd/sshd.pid"
 #define TORTURE_SSHD_CONFIG "sshd/sshd_config"
+#define TORTURE_SSHD1_PIDFILE "sshd1/sshd.pid"
+#define TORTURE_SSHD1_CONFIG "sshd1/sshd_config"
 #define TORTURE_PCAP_FILE "socket_trace.pcap"
 
 static const char torture_rsa_certauth_pub[]=
@@ -560,6 +566,20 @@ const char *torture_server_address(int family)
     return NULL;
 }
 
+const char *torture_server1_address(int family)
+{
+    switch (family) {
+    case AF_INET:
+        return TORTURE_SSHD_SRV1_IPV4;
+    case AF_INET6:
+        return TORTURE_SSHD_SRV1_IPV6;
+    default:
+        return NULL;
+    }
+
+    return NULL;
+}
+
 void torture_setup_socket_dir(void **state)
 {
     struct torture_state *s;
@@ -629,6 +649,32 @@ void torture_setup_socket_dir(void **state)
     *state = s;
 }
 
+static void torture_setup_second_sshd_dir(void **state)
+{
+    struct torture_state *s = *state;
+    size_t len;
+
+    /* pid file */
+    len = strlen(s->socket_dir) + 1 + strlen(TORTURE_SSHD1_PIDFILE) + 1;
+
+    s->srv1_pidfile = malloc(len);
+    assert_non_null(s->srv1_pidfile);
+
+    snprintf(s->srv1_pidfile,
+             len,
+             "%s/%s",
+             s->socket_dir,
+             TORTURE_SSHD1_PIDFILE);
+
+    /* config file */
+    len = strlen(s->socket_dir) + 1 + strlen(TORTURE_SSHD1_CONFIG) + 1;
+
+    s->srv1_config = malloc(len);
+    assert_non_null(s->srv1_config);
+
+    snprintf(s->srv1_config, len, "%s/%s", s->socket_dir, TORTURE_SSHD1_CONFIG);
+}
+
 /**
  * @brief Create a libssh server configuration file
  *
@@ -654,16 +700,16 @@ void torture_setup_create_libssh_config(void **state)
         "LogLevel DEBUG3\n"
         "Port 22\n"
         "ListenAddress 127.0.0.10\n"
-        "%s %s\n"
-        "%s %s\n"
-        "%s %s\n"
+        "HostKey %s\n"
+        "HostKey %s\n"
+        "HostKey %s\n"
         "%s\n"; /* The space for test-specific options */
     const char fips_config_string[] =
         "LogLevel DEBUG3\n"
         "Port 22\n"
         "ListenAddress 127.0.0.10\n"
-        "%s %s\n"
-        "%s %s\n"
+        "HostKey %s\n"
+        "HostKey %s\n"
         "%s\n"; /* The space for test-specific options */
     bool written = false;
     int rc;
@@ -716,20 +762,15 @@ void torture_setup_create_libssh_config(void **state)
         snprintf(sshd_config,
                  sizeof(sshd_config),
                  fips_config_string,
-                 "HostKey",
                  rsa_hostkey,
-                 "HostKey",
                  ecdsa_hostkey,
                  additional_config);
     } else {
         snprintf(sshd_config,
                  sizeof(sshd_config),
                  config_string,
-                 "HostKey",
                  ed25519_hostkey,
-                 "HostKey",
                  rsa_hostkey,
-                 "HostKey",
                  ecdsa_hostkey,
                  additional_config);
     }
@@ -738,7 +779,8 @@ void torture_setup_create_libssh_config(void **state)
 }
 
 #ifdef SSHD_EXECUTABLE
-static void torture_setup_create_sshd_config(void **state, bool pam)
+static void
+torture_setup_create_sshd_config(void **state, bool pam, bool second_sshd)
 {
     struct torture_state *s = *state;
     char ed25519_hostkey[1024] = {0};
@@ -756,96 +798,98 @@ static void torture_setup_create_sshd_config(void **state, bool pam)
         "/usr/libexec/openssh/sftp-server",
         "/usr/lib/openssh/sftp-server",     /* Debian */
     };
-    const char config_string[]=
-             "Port 22\n"
-             "ListenAddress 127.0.0.10\n"
-             "ListenAddress fd00::5357:5f0a\n"
-             "%s %s\n" /* ed25519 HostKey */
-             "%s %s\n" /* RSA HostKey */
-             "%s %s\n" /* ECDSA HostKey */
-             "\n"
-             "TrustedUserCAKeys %s\n"
-             "\n"
-             "LogLevel DEBUG3\n"
-             "Subsystem sftp %s -l DEBUG2\n"
-             "\n"
-             "PasswordAuthentication yes\n"
-             "PubkeyAuthentication yes\n"
-             "\n"
-             "StrictModes no\n"
-             "\n"
-             "%s\n" /* Here comes UsePam */
-             "%s" /* The space for test-specific options */
-             "\n"
-             /* add all supported algorithms */
-             "HostKeyAlgorithms " OPENSSH_KEYS "\n"
+    const char config_string[] =
+        "Port 22\n"
+        "ListenAddress %s\n"
+        "ListenAddress %s\n"
+        "HostKey %s\n" /* ed25519 HostKey */
+        "HostKey %s\n" /* RSA HostKey */
+        "HostKey %s\n" /* ECDSA HostKey */
+        "\n"
+        "TrustedUserCAKeys %s\n"
+        "\n"
+        "LogLevel DEBUG3\n"
+        "Subsystem sftp %s -l DEBUG2\n"
+        "\n"
+        "PasswordAuthentication yes\n"
+        "PubkeyAuthentication yes\n"
+        "\n"
+        "StrictModes no\n"
+        "\n"
+        "%s\n" /* Here comes UsePam */
+        "%s"   /* The space for test-specific options */
+        "\n"
+        /* add all supported algorithms */
+        "HostKeyAlgorithms " OPENSSH_KEYS "\n"
 #if OPENSSH_VERSION_MAJOR == 8 && OPENSSH_VERSION_MINOR >= 2
-             "CASignatureAlgorithms " OPENSSH_KEYS "\n"
+        "CASignatureAlgorithms " OPENSSH_KEYS "\n"
 #endif
 #if (OPENSSH_VERSION_MAJOR == 9 && OPENSSH_VERSION_MINOR >= 8) || OPENSSH_VERSION_MAJOR > 9
-             "PerSourcePenaltyExemptList 127.0.0.21\n"
+        "PerSourcePenaltyExemptList 127.0.0.21\n"
 #endif
-             "Ciphers " OPENSSH_CIPHERS "\n"
-             "KexAlgorithms " OPENSSH_KEX "\n"
-             "MACs " OPENSSH_MACS "\n"
-             "\n"
-             "AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES\n"
-             "AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT\n"
-             "AcceptEnv LC_IDENTIFICATION LC_ALL LC_LIBSSH\n"
-             "\n"
-             "PidFile %s\n";
+        "Ciphers " OPENSSH_CIPHERS "\n"
+        "KexAlgorithms " OPENSSH_KEX "\n"
+        "MACs " OPENSSH_MACS "\n"
+        "\n"
+        "AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY "
+        "LC_MESSAGES\n"
+        "AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT\n"
+        "AcceptEnv LC_IDENTIFICATION LC_ALL LC_LIBSSH\n"
+        "\n"
+        "PidFile %s\n";
     /* FIPS config */
-    const char fips_config_string[]=
-             "Port 22\n"
-             "ListenAddress 127.0.0.10\n"
-             "ListenAddress fd00::5357:5f0a\n"
-             "%s %s\n" /* RSA HostKey */
-             "%s %s\n" /* ECDSA HostKey */
-             "\n"
-             "TrustedUserCAKeys %s\n" /* Trusted CA */
-             "\n"
-             "LogLevel DEBUG3\n"
-             "Subsystem sftp %s -l DEBUG2\n" /* SFTP server */
-             "\n"
-             "PasswordAuthentication yes\n"
-             "PubkeyAuthentication yes\n"
-             "\n"
-             "StrictModes no\n"
-             "\n"
-             "%s\n" /* Here comes UsePam */
-             "%s" /* The space for test-specific options */
-             "\n"
+    const char fips_config_string[] =
+        "Port 22\n"
+        "ListenAddress %s\n"
+        "ListenAddress %s\n"
+        "HostKey %s\n" /* RSA HostKey */
+        "HostKey %s\n" /* ECDSA HostKey */
+        "\n"
+        "TrustedUserCAKeys %s\n" /* Trusted CA */
+        "\n"
+        "LogLevel DEBUG3\n"
+        "Subsystem sftp %s -l DEBUG2\n" /* SFTP server */
+        "\n"
+        "PasswordAuthentication yes\n"
+        "PubkeyAuthentication yes\n"
+        "\n"
+        "StrictModes no\n"
+        "\n"
+        "%s\n" /* Here comes UsePam */
+        "%s"   /* The space for test-specific options */
+        "\n"
 #if (OPENSSH_VERSION_MAJOR == 9 && OPENSSH_VERSION_MINOR >= 8) || OPENSSH_VERSION_MAJOR > 9
-             "PerSourcePenaltyExemptList 127.0.0.21\n"
+        "PerSourcePenaltyExemptList 127.0.0.21\n"
 #endif
-             "Ciphers "
-                "aes256-gcm@openssh.com,aes256-ctr,aes256-cbc,"
-                "aes128-gcm@openssh.com,aes128-ctr,aes128-cbc"
-             "\n"
-             "MACs "
-                "hmac-sha2-256-etm@openssh.com,hmac-sha1-etm@openssh.com,"
-                "hmac-sha2-512-etm@openssh.com,hmac-sha2-256,"
-                "hmac-sha1,hmac-sha2-512"
-             "\n"
-             "GSSAPIKeyExchange no\n"
-             "KexAlgorithms "
-                "ecdh-sha2-nistp256,ecdh-sha2-nistp384,"
-                "ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,"
-                "diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,"
-                "diffie-hellman-group18-sha512"
-             "\n"
-             "PubkeyAcceptedKeyTypes "
-                "rsa-sha2-256,rsa-sha2-256-cert-v01@openssh.com,"
-                "ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com,"
-                "ecdsa-sha2-nistp384,ecdsa-sha2-nistp384-cert-v01@openssh.com,"
-                "rsa-sha2-512,rsa-sha2-512-cert-v01@openssh.com,"
-                "ecdsa-sha2-nistp521,ecdsa-sha2-nistp521-cert-v01@openssh.com"
-             "\n"
-             "AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY LC_MESSAGES\n"
-             "AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT\n"
-             "AcceptEnv LC_IDENTIFICATION LC_ALL LC_LIBSSH\n"
-             "\n"
-             "PidFile %s\n"; /* PID file */
+        "Ciphers "
+        "aes256-gcm@openssh.com,aes256-ctr,aes256-cbc,"
+        "aes128-gcm@openssh.com,aes128-ctr,aes128-cbc"
+        "\n"
+        "MACs "
+        "hmac-sha2-256-etm@openssh.com,hmac-sha1-etm@openssh.com,"
+        "hmac-sha2-512-etm@openssh.com,hmac-sha2-256,"
+        "hmac-sha1,hmac-sha2-512"
+        "\n"
+        "GSSAPIKeyExchange no\n"
+        "KexAlgorithms "
+        "ecdh-sha2-nistp256,ecdh-sha2-nistp384,"
+        "ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha256,"
+        "diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,"
+        "diffie-hellman-group18-sha512"
+        "\n"
+        "PubkeyAcceptedKeyTypes "
+        "rsa-sha2-256,rsa-sha2-256-cert-v01@openssh.com,"
+        "ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com,"
+        "ecdsa-sha2-nistp384,ecdsa-sha2-nistp384-cert-v01@openssh.com,"
+        "rsa-sha2-512,rsa-sha2-512-cert-v01@openssh.com,"
+        "ecdsa-sha2-nistp521,ecdsa-sha2-nistp521-cert-v01@openssh.com"
+        "\n"
+        "AcceptEnv LANG LC_CTYPE LC_NUMERIC LC_TIME LC_COLLATE LC_MONETARY "
+        "LC_MESSAGES\n"
+        "AcceptEnv LC_PAPER LC_NAME LC_ADDRESS LC_TELEPHONE LC_MEASUREMENT\n"
+        "AcceptEnv LC_IDENTIFICATION LC_ALL LC_LIBSSH\n"
+        "\n"
+        "PidFile %s\n"; /* PID file */
     const char usepam_yes[] =
              "UsePAM yes\n"
              "KbdInteractiveAuthentication yes\n";
@@ -869,8 +913,9 @@ static void torture_setup_create_sshd_config(void **state, bool pam)
 
     snprintf(sshd_path,
              sizeof(sshd_path),
-             "%s/sshd",
-             s->socket_dir);
+             "%s/sshd%s",
+             s->socket_dir,
+             second_sshd ? "1" : "");
 
     rc = lstat(sshd_path, &sb);
     if (rc == 0 ) { /* The directory is already in place */
@@ -882,25 +927,29 @@ static void torture_setup_create_sshd_config(void **state, bool pam)
         assert_return_code(rc, errno);
     }
 
-    snprintf(ed25519_hostkey,
-             sizeof(ed25519_hostkey),
-             "%s/sshd/ssh_host_ed25519_key",
-             s->socket_dir);
+    rc = snprintf(ed25519_hostkey,
+                  sizeof(ed25519_hostkey),
+                  "%s/ssh_host_ed25519_key",
+                  sshd_path);
+    assert_true(rc >= 0);
 
-    snprintf(rsa_hostkey,
-             sizeof(rsa_hostkey),
-             "%s/sshd/ssh_host_rsa_key",
-             s->socket_dir);
+    rc = snprintf(rsa_hostkey,
+                  sizeof(rsa_hostkey),
+                  "%s/ssh_host_rsa_key",
+                  sshd_path);
+    assert_true(rc >= 0);
 
-    snprintf(ecdsa_hostkey,
-             sizeof(ecdsa_hostkey),
-             "%s/sshd/ssh_host_ecdsa_key",
-             s->socket_dir);
+    rc = snprintf(ecdsa_hostkey,
+                  sizeof(ecdsa_hostkey),
+                  "%s/ssh_host_ecdsa_key",
+                  sshd_path);
+    assert_true(rc >= 0);
 
-    snprintf(trusted_ca_pubkey,
-             sizeof(trusted_ca_pubkey),
-             "%s/sshd/user_ca.pub",
-             s->socket_dir);
+    rc = snprintf(trusted_ca_pubkey,
+                  sizeof(trusted_ca_pubkey),
+                  "%s/user_ca.pub",
+                  sshd_path);
+    assert_true(rc >= 0);
 
     if (!written) {
         torture_write_file(ed25519_hostkey,
@@ -928,29 +977,39 @@ static void torture_setup_create_sshd_config(void **state, bool pam)
                          s->srv_additional_config : "");
 
     if (ssh_fips_mode()) {
-        snprintf(sshd_config, sizeof(sshd_config),
-                fips_config_string,
-                "HostKey", rsa_hostkey,
-                "HostKey", ecdsa_hostkey,
-                trusted_ca_pubkey,
-                sftp_server,
-                usepam,
-                additional_config,
-                s->srv_pidfile);
+        snprintf(sshd_config,
+                 sizeof(sshd_config),
+                 fips_config_string,
+                 second_sshd ? TORTURE_SSHD_SRV1_IPV4 : TORTURE_SSHD_SRV_IPV4,
+                 second_sshd ? TORTURE_SSHD_SRV1_IPV6 : TORTURE_SSHD_SRV_IPV6,
+                 rsa_hostkey,
+                 ecdsa_hostkey,
+                 trusted_ca_pubkey,
+                 sftp_server,
+                 usepam,
+                 additional_config,
+                 second_sshd ? s->srv1_pidfile : s->srv_pidfile);
     } else {
-        snprintf(sshd_config, sizeof(sshd_config),
-                config_string,
-                "HostKey", ed25519_hostkey,
-                "HostKey", rsa_hostkey,
-                "HostKey", ecdsa_hostkey,
-                trusted_ca_pubkey,
-                sftp_server,
-                usepam,
-                additional_config,
-                s->srv_pidfile);
+        snprintf(sshd_config,
+                 sizeof(sshd_config),
+                 config_string,
+                 second_sshd ? TORTURE_SSHD_SRV1_IPV4 : TORTURE_SSHD_SRV_IPV4,
+                 second_sshd ? TORTURE_SSHD_SRV1_IPV6 : TORTURE_SSHD_SRV_IPV6,
+                 ed25519_hostkey,
+                 rsa_hostkey,
+                 ecdsa_hostkey,
+                 trusted_ca_pubkey,
+                 sftp_server,
+                 usepam,
+                 additional_config,
+                 second_sshd ? s->srv1_pidfile : s->srv_pidfile);
     }
 
-    torture_write_file(s->srv_config, sshd_config);
+    if (second_sshd) {
+        torture_write_file(s->srv1_config, sshd_config);
+    } else {
+        torture_write_file(s->srv_config, sshd_config);
+    }
 }
 
 int torture_wait_for_daemon(unsigned int seconds)
@@ -1172,15 +1231,18 @@ void torture_setup_libssh_server(void **state, const char *server_path)
     }
 }
 
-static int torture_start_sshd_server(void **state)
+static int torture_start_sshd_server(void **state, bool second_sshd)
 {
     struct torture_state *s = *state;
     char sshd_start_cmd[1024];
     int rc;
     char kdc_env[255] = {0};
 
-    /* Set the default interface for the server */
-    setenv("SOCKET_WRAPPER_DEFAULT_IFACE", "10", 1);
+    /* Set the default interface for the server
+     * default is 10 */
+    setenv("SOCKET_WRAPPER_DEFAULT_IFACE",
+           second_sshd ? TORTURE_SSHD_SRV_IFACE : TORTURE_SSHD_SRV_IFACE,
+           1);
     setenv("PAM_WRAPPER", "1", 1);
 
 #ifdef WITH_GSSAPI
@@ -1190,11 +1252,13 @@ static int torture_start_sshd_server(void **state)
     rc = snprintf(sshd_start_cmd,
                   sizeof(sshd_start_cmd),
                   "%s " SSHD_EXECUTABLE
-                  " -r -f %s -E %s/sshd/daemon.log 2> %s/sshd/cwrap.log",
+                  " -r -f %s -E %s/sshd%s/daemon.log 2> %s/sshd%s/cwrap.log",
                   kdc_env,
-                  s->srv_config,
+                  second_sshd ? s->srv1_config : s->srv_config,
                   s->socket_dir,
-                  s->socket_dir);
+                  second_sshd ? "1" : "",
+                  s->socket_dir,
+                  second_sshd ? "1" : "");
     if (rc < 0 || rc >= (int)sizeof(sshd_start_cmd)) {
         fail_msg("snprintf failed");
     }
@@ -1218,9 +1282,22 @@ void torture_setup_sshd_server(void **state, bool pam)
     int rc;
 
     torture_setup_socket_dir(state);
-    torture_setup_create_sshd_config(state, pam);
+    torture_setup_create_sshd_config(state, pam, false);
 
-    rc = torture_start_sshd_server(state);
+    rc = torture_start_sshd_server(state, false);
+    assert_int_equal(rc, 0);
+}
+
+/* Create an another sshd instance in the same SOCKET_WRAPPER_DIR
+ * Param state has to be initialized with torture_setup_sshd_server */
+void torture_setup_sshd_servers(void **state, bool pam)
+{
+    int rc;
+
+    torture_setup_second_sshd_dir(state);
+    torture_setup_create_sshd_config(state, pam, true);
+
+    rc = torture_start_sshd_server(state, true);
     assert_int_equal(rc, 0);
 }
 
@@ -1314,6 +1391,7 @@ torture_teardown_kdc_server(void **state)
 void torture_free_state(struct torture_state *s)
 {
     free(s->srv_config);
+    free(s->srv1_config);
     free(s->socket_dir);
 #ifdef WITH_GSSAPI
     free(s->gss_dir);
@@ -1321,6 +1399,7 @@ void torture_free_state(struct torture_state *s)
     free(s->pcap_file);
     free(s->log_file);
     free(s->srv_pidfile);
+    free(s->srv1_pidfile);
     free(s->srv_additional_config);
     free(s);
 }
@@ -1360,7 +1439,7 @@ torture_reload_sshd_server(void **state)
     rc = torture_terminate_process(s->srv_pidfile);
     assert_return_code(rc, errno);
 
-    return torture_start_sshd_server(state);
+    return torture_start_sshd_server(state, false);
 }
 
 /* @brief: Updates SSHD server configuration with more options and
@@ -1380,7 +1459,7 @@ torture_update_sshd_config(void **state, const char *config)
     assert_non_null(s->srv_additional_config);
 
     /* Rewrite the configuration file */
-    torture_setup_create_sshd_config(state, s->srv_pam);
+    torture_setup_create_sshd_config(state, s->srv_pam, false);
 
     /* Reload the server */
     rc = torture_reload_sshd_server(state);
@@ -1395,7 +1474,19 @@ void torture_teardown_sshd_server(void **state)
     struct torture_state *s = *state;
 
     torture_terminate_process(s->srv_pidfile);
+    if (s->srv1_pidfile != NULL) {
+        torture_terminate_process(s->srv1_pidfile);
+    }
     torture_teardown_socket_dir(state);
+}
+
+void torture_teardown_sshd_server1(void **state)
+{
+    struct torture_state *s = *state;
+
+    torture_terminate_process(s->srv1_pidfile);
+    SAFE_FREE(s->srv1_pidfile);
+    SAFE_FREE(s->srv1_config);
 }
 #endif /* SSHD_EXECUTABLE */
 

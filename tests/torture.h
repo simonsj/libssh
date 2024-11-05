@@ -72,6 +72,8 @@ struct torture_state {
     char *log_file;
     char *srv_pidfile;
     char *srv_config;
+    char *srv1_pidfile;
+    char *srv1_config;
     bool srv_pam;
     char *srv_additional_config;
     struct {
@@ -121,6 +123,7 @@ void torture_write_file(const char *filename, const char *data);
 void _torture_filter_tests(struct CMUnitTest *tests, size_t ntests);
 
 const char *torture_server_address(int domain);
+const char *torture_server1_address(int domain);
 int torture_server_port(void);
 
 int torture_wait_for_daemon(unsigned int seconds);
@@ -128,9 +131,11 @@ int torture_wait_for_daemon(unsigned int seconds);
 #ifdef SSHD_EXECUTABLE
 void torture_setup_socket_dir(void **state);
 void torture_setup_sshd_server(void **state, bool pam);
+void torture_setup_sshd_servers(void **state, bool pam);
 
 void torture_teardown_socket_dir(void **state);
 void torture_teardown_sshd_server(void **state);
+void torture_teardown_sshd_server1(void **state);
 
 int torture_update_sshd_config(void **state, const char *config);
 #endif /* SSHD_EXECUTABLE */
