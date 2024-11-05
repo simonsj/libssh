@@ -125,7 +125,11 @@ struct ssh_crypto_struct {
     ssh_string ecdh_server_pubkey;
 #endif
 #ifdef HAVE_CURVE25519
+#ifdef HAVE_LIBCRYPTO
+    EVP_PKEY *curve25519_privkey;
+#else
     ssh_curve25519_privkey curve25519_privkey;
+#endif
     ssh_curve25519_pubkey curve25519_client_pubkey;
     ssh_curve25519_pubkey curve25519_server_pubkey;
 #endif

@@ -189,6 +189,9 @@ void crypto_free(struct ssh_crypto_struct *crypto)
         crypto->ecdh_privkey = NULL;
     }
 #endif
+#ifdef HAVE_LIBCRYPTO
+    EVP_PKEY_free(crypto->curve25519_privkey);
+#endif
     SAFE_FREE(crypto->dh_server_signature);
     if (crypto->session_id != NULL) {
         explicit_bzero(crypto->session_id, crypto->session_id_len);

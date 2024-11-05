@@ -62,8 +62,8 @@ static int ssh_curve25519_init(ssh_session session)
 #ifdef HAVE_LIBCRYPTO
     EVP_PKEY_CTX *pctx = NULL;
     EVP_PKEY *pkey = NULL;
+    ssh_curve25519_pubkey *pubkey_loc = NULL;
     size_t pubkey_len = CURVE25519_PUBKEY_SIZE;
-    size_t pkey_len = CURVE25519_PRIVKEY_SIZE;
 
     pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_X25519, NULL);
     if (pctx == NULL) {
@@ -92,15 +92,12 @@ static int ssh_curve25519_init(ssh_session session)
     }
 
     if (session->server) {
-        rc = EVP_PKEY_get_raw_public_key(pkey,
-                                         session->next_crypto->curve25519_server_pubkey,
-                                         &pubkey_len);
+        pubkey_loc = &session->next_crypto->curve25519_server_pubkey;
     } else {
-        rc = EVP_PKEY_get_raw_public_key(pkey,
-                                         session->next_crypto->curve25519_client_pubkey,
-                                         &pubkey_len);
+        pubkey_loc = &session->next_crypto->curve25519_client_pubkey;
     }
 
+    rc = EVP_PKEY_get_raw_public_key(pkey, *pubkey_loc, &pubkey_len);
     if (rc != 1) {
         SSH_LOG(SSH_LOG_TRACE,
                 "Failed to get X25519 raw public key: %s",
@@ -109,18 +106,8 @@ static int ssh_curve25519_init(ssh_session session)
         return SSH_ERROR;
     }
 
-    rc = EVP_PKEY_get_raw_private_key(pkey,
-                                      session->next_crypto->curve25519_privkey,
-                                      &pkey_len);
-    if (rc != 1) {
-        SSH_LOG(SSH_LOG_TRACE,
-                "Failed to get X25519 raw private key: %s",
-                ERR_error_string(ERR_get_error(), NULL));
-        EVP_PKEY_free(pkey);
-        return SSH_ERROR;
-    }
-
-    EVP_PKEY_free(pkey);
+    session->next_crypto->curve25519_privkey = pkey;
+    pkey = NULL;
 #else
     rc = ssh_get_random(session->next_crypto->curve25519_privkey,
                         CURVE25519_PRIVKEY_SIZE, 1);
@@ -187,9 +174,7 @@ static int ssh_curve25519_build_k(ssh_session session)
     size_t shared_key_len = sizeof(k);
     int rc, ret = SSH_ERROR;
 
-    pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_X25519, NULL,
-                                        session->next_crypto->curve25519_privkey,
-                                        CURVE25519_PRIVKEY_SIZE);
+    pkey = session->next_crypto->curve25519_privkey;
     if (pkey == NULL) {
         SSH_LOG(SSH_LOG_TRACE,
                 "Failed to create X25519 EVP_PKEY: %s",
@@ -246,7 +231,6 @@ static int ssh_curve25519_build_k(ssh_session session)
     }
     ret = SSH_OK;
 out:
-    EVP_PKEY_free(pkey);
     EVP_PKEY_free(pubkey);
     EVP_PKEY_CTX_free(pctx);
     if (ret == SSH_ERROR) {
