@@ -311,7 +311,14 @@ int ssh_options_set_algo(ssh_session session,
  *              following:
  *
  *              - SSH_OPTIONS_HOST:
- *                The hostname or ip address to connect to (const char *).
+ *                The hostname or ip address to connect to. It can be also in
+ *                the format of URI, containing also username, such as
+ *                [username@]hostname. The IPv6 addresses can be enclosed
+ *                within square braces, for example [::1]. The IPv4 address
+ *                supports any format supported by OS. The hostname needs to be
+ *                encoded to match RFC1035, so for IDN it needs to be encoded
+ *                in punycode.
+ *                (const char *).
  *
  *              - SSH_OPTIONS_PORT:
  *                The port to connect to (unsigned int).
