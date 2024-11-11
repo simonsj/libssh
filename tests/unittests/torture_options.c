@@ -8,6 +8,7 @@
 #endif
 #include <sys/stat.h>
 
+#include <errno.h>
 #include "torture.h"
 #include "torture_key.h"
 #include <libssh/session.h>
@@ -88,6 +89,40 @@ static void torture_options_set_host(void **state) {
 
     /* disallow metacharacters in the username */
     rc = ssh_options_set(session, SSH_OPTIONS_HOST, "shallN()tP4ss -@hostname");
+    assert_string_equal(ssh_get_error(session),
+                        "Invalid argument in ssh_options_set");
+    assert_ssh_return_code_equal(session, rc, SSH_ERROR);
+
+    /* IPv6 hostnames should work without square braces */
+    SAFE_FREE(session->opts.username);
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_HOST,
+                         "fd4d:5449:7400:111:626d:3cff:fedf:4d39");
+    assert_return_code(rc, errno);
+    assert_non_null(session->opts.host);
+    assert_string_equal(session->opts.host,
+                        "fd4d:5449:7400:111:626d:3cff:fedf:4d39");
+    assert_null(session->opts.username);
+
+    /* IPv6 hostnames should work also with square braces */
+    rc = ssh_options_set(session,
+                         SSH_OPTIONS_HOST,
+                         "[fd4d:5449:7400:111:626d:3cff:fedf:4d39]");
+    assert_return_code(rc, errno);
+    assert_non_null(session->opts.host);
+    assert_string_equal(session->opts.host,
+                        "fd4d:5449:7400:111:626d:3cff:fedf:4d39");
+    assert_null(session->opts.username);
+
+    /* IDN need to be in punycode format */
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "xn--bcher-kva.tld");
+    assert_return_code(rc, errno);
+    assert_non_null(session->opts.host);
+    assert_string_equal(session->opts.host, "xn--bcher-kva.tld");
+    assert_null(session->opts.username);
+
+    /* IDN in UTF8 wont work */
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "bücher.tld");
     assert_string_equal(ssh_get_error(session),
                         "Invalid argument in ssh_options_set");
     assert_ssh_return_code_equal(session, rc, SSH_ERROR);
