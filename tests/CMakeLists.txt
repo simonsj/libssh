@@ -302,8 +302,9 @@ if (CLIENT_TESTING OR SERVER_TESTING)
     file(COPY keys/id_ed25519 DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
     file(COPY keys/id_ed25519.pub DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/home/bob/.ssh/ FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
 
-    # Allow to auth with bob's public keys on alice account
+    # Allow to auth with bob's public keys on alice and doe account
     configure_file(keys/id_rsa.pub ${CMAKE_CURRENT_BINARY_DIR}/home/alice/.ssh/authorized_keys @ONLY)
+    configure_file(keys/id_rsa.pub ${CMAKE_CURRENT_BINARY_DIR}/home/doe/.ssh/authorized_keys @ONLY)
 
     # append ECDSA public key
     file(READ keys/id_ecdsa.pub CONTENTS)
