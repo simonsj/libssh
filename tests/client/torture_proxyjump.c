@@ -174,6 +174,55 @@ torture_proxyjump_multiple_jump(void **state)
 }
 
 static void
+torture_proxyjump_multiple_sshd_jump(void **state)
+{
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    char proxyjump_buf[500] = {0};
+    const char *address = torture_server_address(AF_INET);
+    const char *address1 = torture_server1_address(AF_INET6);
+    int rc;
+    socket_t fd;
+
+    struct ssh_jump_callbacks_struct c = {
+        .before_connection = before_connection,
+        .verify_knownhost = verify_knownhost,
+        .authenticate = authenticate,
+    };
+
+    torture_setup_sshd_servers(state, false);
+
+    rc = snprintf(proxyjump_buf,
+                  sizeof(proxyjump_buf),
+                  "alice@%s:22,alice@%s:22",
+                  address,
+                  address1);
+    if (rc < 0 || rc >= (int)sizeof(proxyjump_buf)) {
+        fail_msg("snprintf failed");
+    }
+    rc = ssh_options_set(session, SSH_OPTIONS_PROXYJUMP, proxyjump_buf);
+    assert_ssh_return_code(session, rc);
+    rc = ssh_options_set(session, SSH_OPTIONS_PROXYJUMP_CB_LIST_APPEND, &c);
+    assert_ssh_return_code(session, rc);
+    rc = ssh_options_set(session, SSH_OPTIONS_PROXYJUMP_CB_LIST_APPEND, &c);
+    assert_ssh_return_code(session, rc);
+
+    rc = ssh_connect(session);
+    assert_ssh_return_code(session, rc);
+
+    fd = ssh_get_fd(session);
+    assert_int_not_equal(fd, SSH_INVALID_SOCKET);
+
+    rc = fcntl(fd, F_GETFL);
+    assert_int_equal(rc & O_RDWR, O_RDWR);
+
+    rc = ssh_userauth_publickey_auto(session, NULL, NULL);
+    assert_int_equal(rc, SSH_AUTH_SUCCESS);
+
+    torture_teardown_sshd_server1(state);
+}
+
+static void
 torture_proxyjump_invalid_jump(void **state)
 {
     struct torture_state *s = *state;
@@ -205,6 +254,9 @@ torture_run_tests(void)
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_proxyjump_multiple_jump,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_proxyjump_multiple_sshd_jump,
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_proxyjump_invalid_jump,
