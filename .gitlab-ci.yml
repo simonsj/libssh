@@ -143,7 +143,7 @@ centos10s/openssl_3.2.x/x86_64/fips:
       make -j$(nproc) &&
       OPENSSL_FORCE_FIPS_MODE=1 ctest --output-on-failure
 
-centos9s/openssl_3.0.x/x86_64:
+centos9s/openssl_3.x/x86_64:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS9_BUILD
   extends: .tests
   variables:
@@ -160,7 +160,7 @@ centos9s/mbedtls_2.x/x86_64:
   variables:
     CMAKE_ADDITIONAL_OPTIONS: "-DWITH_MBEDTLS=ON -DWITH_DEBUG_CRYPTO=ON -DWITH_BLOWFISH_CIPHER=OFF"
 
-centos9s/openssl_3.0.x/x86_64/fips:
+centos9s/openssl_3.x/x86_64/fips:
   extends: .fips
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$CENTOS9_BUILD
   script:
@@ -225,15 +225,15 @@ fedora/coverage:
         coverage_format: cobertura
         path: obj/coverage_xml.xml
 
-fedora/openssl_3.0.x/x86_64:
+fedora/openssl_3.x/x86_64:
   extends: .fedora
 
-fedora/openssl_3.0.x/x86_64/pkcs11-provider:
+fedora/openssl_3.x/x86_64/pkcs11-provider:
   variables:
     CMAKE_ADDITIONAL_OPTIONS: -DWITH_PKCS11_URI=ON -DWITH_PKCS11_PROVIDER=ON
   extends: .fedora
 
-fedora/openssl_3.0.x/x86_64/minimal:
+fedora/openssl_3.x/x86_64/minimal:
   extends: .fedora
   variables:
   script:
@@ -405,7 +405,7 @@ fedora/mingw32:
     paths:
       - obj-csbuild/
 
-fedora/csbuild/openssl_3.0.x:
+fedora/csbuild/openssl_3.x:
   extends: .csbuild
   script:
     - csbuild
@@ -447,7 +447,7 @@ ubuntu/openssl_3.0.x/x86_64:
 ###############################################################################
 #                               Alpine builds                                 #
 ###############################################################################
-alpine/openssl_3.0.x/musl:
+alpine/openssl_3.x/musl:
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$ALPINE_BUILD
   extends: .tests
   script:
@@ -464,10 +464,10 @@ alpine/openssl_3.0.x/musl:
 ###############################################################################
 #                             Tumbleweed builds                               #
 ###############################################################################
-tumbleweed/openssl_3.0.x/x86_64/gcc:
+tumbleweed/openssl_3.x/x86_64/gcc:
   extends: .tumbleweed
 
-tumbleweed/openssl_3.0.x/x86/gcc:
+tumbleweed/openssl_3.x/x86/gcc:
   extends: .tumbleweed
   script:
     - cmake
@@ -480,12 +480,12 @@ tumbleweed/openssl_3.0.x/x86/gcc:
       -DUNIT_TESTING=ON .. &&
       make -j$(nproc)
 
-tumbleweed/openssl_3.0.x/x86_64/gcc7:
+tumbleweed/openssl_3.x/x86_64/gcc7:
   extends: .tumbleweed
   variables:
     CMAKE_ADDITIONAL_OPTIONS: "-DCMAKE_C_COMPILER=gcc-7 -DCMAKE_CXX_COMPILER=g++-7"
 
-tumbleweed/openssl_3.0.x/x86/gcc7:
+tumbleweed/openssl_3.x/x86/gcc7:
   extends: .tumbleweed
   script:
     - cmake
@@ -497,7 +497,7 @@ tumbleweed/openssl_3.0.x/x86/gcc7:
       make -j$(nproc) &&
       ctest --output-on-failure
 
-tumbleweed/openssl_3.0.x/x86_64/clang:
+tumbleweed/openssl_3.x/x86_64/clang:
   extends: .tumbleweed
   variables:
     CMAKE_ADDITIONAL_OPTIONS: "-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
