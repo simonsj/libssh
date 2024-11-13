@@ -2784,6 +2784,12 @@ error:
    }
 @endcode
  *
+ * @warning In a single channel, only ONE command can be executed!
+ * If you want to executed multiple commands, allocate separate channels for
+ * them or consider opening interactive shell.
+ * Attempting to run multiple consecutive commands in one channel will fail.
+ * See RFC 4254 Section 6.5.
+ *
  * @see ssh_channel_request_shell()
  */
 int ssh_channel_request_exec(ssh_channel channel, const char *cmd)
