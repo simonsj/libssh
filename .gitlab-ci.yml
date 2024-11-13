@@ -75,8 +75,6 @@ workflow:
 .fedora:
   extends: .tests
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
-  variables:
-    CMAKE_ADDITIONAL_OPTIONS: -DWITH_PKCS11_URI=ON
 
 .tumbleweed:
   extends: .tests
