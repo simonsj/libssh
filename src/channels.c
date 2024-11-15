@@ -1290,6 +1290,11 @@ void ssh_channel_free(ssh_channel channel)
     }
     channel->flags |= SSH_CHANNEL_FLAG_FREED_LOCAL;
 
+    if (channel->callbacks != NULL) {
+        ssh_list_free(channel->callbacks);
+        channel->callbacks = NULL;
+    }
+
     /* The idea behind the flags is the following : it is well possible
      * that a client closes a channel that still exists on the server side.
      * We definitively close the channel when we receive a close message *and*
