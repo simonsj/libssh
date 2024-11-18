@@ -52,9 +52,9 @@
 
 static ssh_packet_callback default_packet_handlers[]= {
   ssh_packet_disconnect_callback,          // SSH2_MSG_DISCONNECT                 1
-  ssh_packet_ignore_callback,              // SSH2_MSG_IGNORE	                    2
+  ssh_packet_ignore_callback,              // SSH2_MSG_IGNORE                     2
   ssh_packet_unimplemented,                // SSH2_MSG_UNIMPLEMENTED              3
-  ssh_packet_ignore_callback,              // SSH2_MSG_DEBUG	                    4
+  ssh_packet_debug_callback,               // SSH2_MSG_DEBUG                      4
 #if WITH_SERVER
   ssh_packet_service_request,              // SSH2_MSG_SERVICE_REQUEST	          5
 #else
