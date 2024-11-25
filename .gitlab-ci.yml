@@ -568,9 +568,7 @@ freebsd/openssl_1.1.1/x86_64:
 # 2024-05-13: These jobs run out of the stages as they take extremely long and
 # usually timeout with the update to Gitlab 17.0
 .vs:
-  stage: analysis
-  needs: []
-  allow_failure: true
+  stage: test
   cache:
     key: vcpkg.${CI_JOB_NAME}
     paths:
