@@ -27,13 +27,16 @@ workflow:
       when: never
     - if: '$CI_COMMIT_BRANCH'
 
-.build:
-  stage: build
+.build_options:
   variables:
     CMAKE_DEFAULT_OPTIONS: "-DCMAKE_BUILD_TYPE=RelWithDebInfo -DPICKY_DEVELOPER=ON"
     CMAKE_BUILD_OPTIONS: "-DWITH_BLOWFISH_CIPHER=ON -DWITH_SFTP=ON -DWITH_SERVER=ON -DWITH_ZLIB=ON -DWITH_PCAP=ON -DWITH_DEBUG_CRYPTO=ON -DWITH_DEBUG_PACKET=ON -DWITH_DEBUG_CALLTRACE=ON"
     CMAKE_TEST_OPTIONS: "-DUNIT_TESTING=ON -DCLIENT_TESTING=ON -DSERVER_TESTING=ON -DGSSAPI_TESTING=ON -DWITH_BENCHMARKS=ON -DFUZZ_TESTING=ON"
     CMAKE_OPTIONS: $CMAKE_DEFAULT_OPTIONS $CMAKE_BUILD_OPTIONS $CMAKE_TEST_OPTIONS
+
+.build:
+  extends: .build_options
+  stage: build
   before_script: &build
     - uname -a
     - cat /etc/os-release
@@ -435,6 +438,60 @@ fedora/csbuild/mbedtls:
       --color
       --print-current --print-fixed
 
+###############################################################################
+#                               Fedora abidiff                                #
+###############################################################################
+
+fedora/abidiff:
+  stage: analysis
+  variables:
+    GIT_DEPTH: "100"
+    CMAKE_OPTIONS: $CMAKE_DEFAULT_OPTIONS $CMAKE_BUILD_OPTIONS
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  before_script:
+    - uname -a
+    - cat /etc/os-release
+    - mount
+    - df -h
+    - cat /proc/swaps
+    - free -h
+    - |
+      # for merge requests
+      if [[ -n "$CI_MERGE_REQUEST_DIFF_BASE_SHA" ]]; then
+          export CI_COMMIT_BEFORE_SHA="$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+      fi
+      # for branches run
+      if [[ -z "$CI_COMMIT_BEFORE_SHA" ]]; then
+          export CI_COMMIT_BEFORE_SHA=$(git rev-parse "${CI_COMMIT_SHA}~20")
+      fi
+
+      # Check if the commit exists in this branch
+      # This is not the case for a force push
+      git branch --contains $CI_COMMIT_BEFORE_SHA 2>/dev/null || export CI_COMMIT_BEFORE_SHA=$(git rev-parse "${CI_COMMIT_SHA}~20")
+
+    - mkdir -p obj-${CI_COMMIT_BEFORE_SHA}
+    - mkdir -p obj-${CI_COMMIT_SHA}
+
+    - export INSTALL_DIR1=$(pwd)/install/${CI_COMMIT_BEFORE_SHA}
+    - export INSTALL_DIR2=$(pwd)/install/${CI_COMMIT_SHA}
+  script:
+    - git checkout ${CI_COMMIT_BEFORE_SHA}
+    - pushd obj-${CI_COMMIT_BEFORE_SHA}
+    - cmake ${CMAKE_OPTIONS} -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR1} .. &&
+      make -j$(nproc) && make -j$(nproc) install
+    - popd
+    - git checkout ${CI_COMMIT_SHA}
+    - pushd obj-${CI_COMMIT_SHA}
+    - cmake ${CMAKE_OPTIONS} -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR2} .. &&
+      make -j$(nproc) && make -j$(nproc) install
+    - popd
+    - abidiff --headers-dir1 ${INSTALL_DIR1}/include/libssh/ --headers-dir2 ${INSTALL_DIR2}/include/libssh/ ${INSTALL_DIR1}/lib64/libssh.so ${INSTALL_DIR2}/lib64/libssh.so
+  tags:
+    - saas-linux-small-amd64
+  except:
+    - tags
+  only:
+    - merge_requests
 
 ###############################################################################
 #                               Ubuntu builds                                 #
