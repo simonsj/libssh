@@ -756,18 +756,21 @@ int torture_run_tests(void)
         cmocka_unit_test_setup_teardown(torture_pki_rsa_import_pubkey_file,
                                         setup_rsa_key,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_privkey_base64_NULL_key,
-                                        setup_rsa_key,
-                                        teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_import_privkey_base64_NULL_str,
-                                        setup_rsa_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_privkey_base64_NULL_key,
+            setup_rsa_key,
+            teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_import_privkey_base64_NULL_str,
+            setup_rsa_key,
+            teardown),
         cmocka_unit_test_setup_teardown(torture_pki_rsa_import_privkey_base64,
                                         setup_rsa_key,
                                         teardown),
-        cmocka_unit_test_setup_teardown(torture_pki_rsa_publickey_from_privatekey,
-                                        setup_rsa_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(
+            torture_pki_rsa_publickey_from_privatekey,
+            setup_rsa_key,
+            teardown),
         cmocka_unit_test(torture_pki_rsa_import_privkey_base64_passphrase),
         cmocka_unit_test_setup_teardown(torture_pki_rsa_copy_cert_to_privkey,
                                         setup_rsa_key,
@@ -784,9 +787,7 @@ int torture_run_tests(void)
         cmocka_unit_test_setup_teardown(torture_pki_rsa_generate_key,
                                         disable_secmem,
                                         enable_secmem),
-        cmocka_unit_test_setup_teardown(torture_mixed,
-                                        setup_rsa_key,
-                                        teardown),
+        cmocka_unit_test_setup_teardown(torture_mixed, setup_rsa_key, teardown),
     };
 
     /*
