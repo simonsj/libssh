@@ -966,6 +966,7 @@ int ssh_crypto_init(void)
     gcry_control (GCRYCTL_SUSPEND_SECMEM_WARN);
 
     if (!gcry_control(GCRYCTL_INITIALIZATION_FINISHED_P, 0)) {
+        gcry_control(GCRYCTL_USE_SECURE_RNDPOOL);
         gcry_control(GCRYCTL_INIT_SECMEM, 32768, 0);
         gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
     }
