@@ -192,9 +192,6 @@ static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 static int
 parse_opt(int argc, char **argv, ssh_bind sshbind)
 {
-    int no_default_keys = 0;
-    int rsa_already_set = 0;
-    int ecdsa_already_set = 0;
     int key;
 
     while((key = getopt(argc, argv, "a:e:k:p:P:r:u:v")) != -1) {
@@ -202,16 +199,10 @@ parse_opt(int argc, char **argv, ssh_bind sshbind)
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT_STR, optarg);
         } else if (key == 'k') {
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, optarg);
-            /* We can't track the types of keys being added with this
-            option, so let's ensure we keep the keys we're adding
-            by just not setting the default keys */
-            no_default_keys = 1;
         } else if (key == 'r') {
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, optarg);
-            rsa_already_set = 1;
         } else if (key == 'e') {
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, optarg);
-            ecdsa_already_set = 1;
         } else if (key == 'a') {
             strncpy(authorizedkeys, optarg, DEF_STR_SIZE-1);
         } else if (key == 'u') {
@@ -255,12 +246,6 @@ parse_opt(int argc, char **argv, ssh_bind sshbind)
     }
 
     ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDADDR, argv[optind]);
-
-    if (!no_default_keys) {
-        set_default_keys(sshbind,
-                         rsa_already_set,
-                         ecdsa_already_set);
-    }
 
     return 0;
 }
