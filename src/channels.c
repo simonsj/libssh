@@ -618,7 +618,8 @@ SSH_PACKET_CALLBACK(channel_rcv_data)
 
         return SSH_PACKET_USED;
     }
-    len = ssh_string_len(str);
+    /* STRING_SIZE_MAX < UINT32_MAX */
+    len = (uint32_t)ssh_string_len(str);
 
     SSH_LOG(SSH_LOG_PACKET,
             "Channel receiving %" PRIu32 " bytes data%s (local win=%" PRIu32
@@ -1523,7 +1524,7 @@ static int channel_write_common(ssh_channel channel,
 {
   ssh_session session;
   uint32_t origlen = len;
-  size_t effectivelen;
+  uint32_t effectivelen;
   int rc;
 
   if(channel == NULL) {
@@ -1633,7 +1634,8 @@ static int channel_write_common(ssh_channel channel,
     }
 
     SSH_LOG(SSH_LOG_PACKET,
-        "ssh_channel_write wrote %ld bytes", (long int) effectivelen);
+            "ssh_channel_write wrote %" PRIu32 " bytes",
+            effectivelen);
 
     channel->remote_window -= effectivelen;
     len -= effectivelen;

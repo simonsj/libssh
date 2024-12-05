@@ -205,8 +205,10 @@ int match_pattern_list(const char *string, const char *pattern,
  * Returns -1 if negation matches, 1 if there is a positive match, 0 if there
  * is no match at all.
  */
-int match_hostname(const char *host, const char *pattern, unsigned int len) {
-  return match_pattern_list(host, pattern, len, 1);
+int
+match_hostname(const char *host, const char *pattern, size_t len)
+{
+    return match_pattern_list(host, pattern, len, 1);
 }
 
 #ifndef _WIN32

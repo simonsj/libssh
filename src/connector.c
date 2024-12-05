@@ -264,17 +264,17 @@ static void ssh_connector_fd_in_cb(ssh_connector connector)
                 }
                 connector->in_available = 1; /* Don't poll on it */
                 return;
-            } else if (r> 0) {
+            } else if (r > 0) {
                 /* loop around ssh_channel_write in case our window reduced due to a race */
                 while (total != r){
                     if (connector->out_flags & SSH_CONNECTOR_STDOUT) {
                         w = ssh_channel_write(connector->out_channel,
                                               buffer + total,
-                                              r - total);
+                                              (uint32_t)(r - total));
                     } else {
                         w = ssh_channel_write_stderr(connector->out_channel,
                                                      buffer + total,
-                                                     r - total);
+                                                     (uint32_t)(r - total));
                     }
                     if (w == SSH_ERROR) {
                         return;
@@ -294,7 +294,7 @@ static void ssh_connector_fd_in_cb(ssh_connector connector)
                 while (total < r) {
                     w = ssh_connector_fd_write(connector,
                                                buffer + total,
-                                               r - total);
+                                               (uint32_t)(r - total));
                     if (w < 0) {
                         ssh_connector_except(connector, connector->out_fd);
                         return;
@@ -340,8 +340,9 @@ ssh_connector_fd_out_cb(ssh_connector connector)
             } else if (r > 0) {
                 /* loop around write in case the write blocks even for CHUNKSIZE bytes */
                 while (total != r) {
-                    w = ssh_connector_fd_write(connector, buffer + total,
-                                               r - total);
+                    w = ssh_connector_fd_write(connector,
+                                               buffer + total,
+                                               (uint32_t)(r - total));
                     if (w < 0) {
                         ssh_connector_except(connector, connector->out_fd);
                         return;
@@ -476,9 +477,11 @@ static int ssh_connector_channel_data_cb(ssh_session session,
                 ssh_connector_except_channel(connector, connector->out_channel);
             }
         } else if (connector->out_fd != SSH_INVALID_SOCKET) {
-                w = ssh_connector_fd_write(connector, data, len);
-            if (w < 0)
+            ssize_t ws = ssh_connector_fd_write(connector, data, len);
+            if (ws < 0) {
                 ssh_connector_except(connector, connector->out_fd);
+            }
+            w = (int)ws;
         } else {
             ssh_set_error(session, SSH_FATAL, "output socket or channel closed");
             return SSH_ERROR;

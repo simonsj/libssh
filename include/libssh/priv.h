@@ -333,7 +333,7 @@ int decompress_buffer(ssh_session session,ssh_buffer buf, size_t maxlen);
 /* match.c */
 int match_pattern_list(const char *string, const char *pattern,
     size_t len, int dolower);
-int match_hostname(const char *host, const char *pattern, unsigned int len);
+int match_hostname(const char *host, const char *pattern, size_t len);
 #ifndef _WIN32
 int match_cidr_address_list(const char *address,
                             const char *addrlist,

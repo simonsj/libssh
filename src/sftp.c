@@ -605,27 +605,30 @@ const char *sftp_extensions_get_data(sftp_session sftp, unsigned int idx) {
   return sftp->ext->data[idx];
 }
 
-int sftp_extension_supported(sftp_session sftp, const char *name,
-    const char *data) {
-  size_t i, n;
+int
+sftp_extension_supported(sftp_session sftp,
+                         const char *name,
+                         const char *data)
+{
+    unsigned int i, n;
 
-  if (sftp == NULL || name == NULL || data == NULL) {
-    return 0;
-  }
-
-  n = sftp_extensions_get_count(sftp);
-  for (i = 0; i < n; i++) {
-    const char *ext_name = sftp_extensions_get_name(sftp, i);
-    const char *ext_data = sftp_extensions_get_data(sftp, i);
-
-    if (ext_name != NULL && ext_data != NULL &&
-        strcmp(ext_name, name) == 0 &&
-        strcmp(ext_data, data) == 0) {
-      return 1;
+    if (sftp == NULL || name == NULL || data == NULL) {
+        return 0;
     }
-  }
 
-  return 0;
+    n = sftp_extensions_get_count(sftp);
+    for (i = 0; i < n; i++) {
+        const char *ext_name = sftp_extensions_get_name(sftp, i);
+        const char *ext_data = sftp_extensions_get_data(sftp, i);
+
+        if (ext_name != NULL && ext_data != NULL &&
+            strcmp(ext_name, name) == 0 &&
+            strcmp(ext_data, data) == 0) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 static sftp_file parse_handle_msg(sftp_message msg){
@@ -1156,7 +1159,10 @@ ssize_t sftp_read(sftp_file handle, void *buf, size_t count) {
    * requested to provide less surprises to the calling applications.
    */
   if (count > sftp->limits->max_read_length) {
-      count = sftp->limits->max_read_length;
+      if (sftp->limits->max_read_length > SIZE_MAX) {
+          return SSH_ERROR;
+      }
+      count = (size_t)sftp->limits->max_read_length;
   }
 
   buffer = ssh_buffer_new();
@@ -1297,7 +1303,7 @@ int sftp_async_read(sftp_file file, void *data, uint32_t size, uint32_t id){
   sftp_status_message status;
   ssh_string datastring;
   int rc, err = SSH_OK;
-  uint32_t len;
+  size_t len;
 
   if (file == NULL) {
     return SSH_ERROR;
@@ -1352,7 +1358,7 @@ int sftp_async_read(sftp_file file, void *data, uint32_t size, uint32_t id){
       file->offset = file->offset - (size - len);
       memcpy(data, ssh_string_data(datastring), len);
       SSH_STRING_FREE(datastring);
-      return len;
+      return (int)len;
     default:
       ssh_set_error(sftp->session,SSH_FATAL,"Received message %d during read!",msg->packet_type);
       sftp_message_free(msg);
@@ -1396,7 +1402,10 @@ ssize_t sftp_write(sftp_file file, const void *buf, size_t count) {
    * requested to provide less surprises to the calling applications.
    */
   if (count > sftp->limits->max_write_length) {
-      count = sftp->limits->max_write_length;
+      if (sftp->limits->max_write_length > SIZE_MAX) {
+          return SSH_ERROR;
+      }
+      count = (size_t)sftp->limits->max_write_length;
   }
 
   rc = ssh_buffer_pack(buffer,

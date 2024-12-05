@@ -1453,6 +1453,8 @@ static void torture_options_getopt(void **state)
     /* Test with all the supported options */
     rc = ssh_options_getopt(session, &argc, (char **)argv);
 #ifdef _MSC_VER
+    UNUSED_VAR(new_level);
+
     /* Not supported in windows */
     assert_ssh_return_code_equal(session, rc, -1);
 #else

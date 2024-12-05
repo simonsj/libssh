@@ -312,7 +312,7 @@ HMACCTX hmac_init(const void *key, size_t len, enum ssh_hmac_e type)
         return NULL;
     }
 
-    pkey = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, NULL, key, len);
+    pkey = EVP_PKEY_new_mac_key(EVP_PKEY_HMAC, NULL, key, (int)len);
     if (pkey == NULL) {
         goto error;
     }
@@ -598,7 +598,7 @@ evp_cipher_aead_encrypt(struct ssh_cipher_struct *cipher,
                            (unsigned char *)out + aadlen,
                            &tmplen,
                            (unsigned char *)in + aadlen,
-                           (int)len - aadlen);
+                           (int)(len - aadlen));
     outlen = tmplen;
     if (rc != 1 || outlen != (int)len - aadlen) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_EncryptUpdate failed");
@@ -616,7 +616,7 @@ evp_cipher_aead_encrypt(struct ssh_cipher_struct *cipher,
 
     rc = EVP_CIPHER_CTX_ctrl(cipher->ctx,
                              EVP_CTRL_GCM_GET_TAG,
-                             authlen,
+                             (int)authlen,
                              (unsigned char *)tag);
     if (rc != 1) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_CTRL_GCM_GET_TAG failed");
@@ -654,7 +654,7 @@ evp_cipher_aead_decrypt(struct ssh_cipher_struct *cipher,
     /* set tag for authentication */
     rc = EVP_CIPHER_CTX_ctrl(cipher->ctx,
                              EVP_CTRL_GCM_SET_TAG,
-                             authlen,
+                             (int)authlen,
                              (unsigned char *)complete_packet + aadlen + encrypted_size);
     if (rc == 0) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_CTRL_GCM_SET_TAG failed");
@@ -679,7 +679,7 @@ evp_cipher_aead_decrypt(struct ssh_cipher_struct *cipher,
                            (unsigned char *)out,
                            &outlen,
                            (unsigned char *)complete_packet + aadlen,
-                           encrypted_size /* already subtracted aadlen */);
+                           (int)encrypted_size /* already subtracted aadlen */);
     if (rc != 1) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_DecryptUpdate failed");
         return SSH_ERROR;
@@ -961,7 +961,7 @@ chacha20_poly1305_aead_decrypt_length(struct ssh_cipher_struct *cipher,
         return SSH_ERROR;
     }
 
-    rv = EVP_CipherUpdate(ctx->header_evp, out, &outlen, in, len);
+    rv = EVP_CipherUpdate(ctx->header_evp, out, &outlen, in, (int)len);
     if (rv != 1 || outlen != sizeof(uint32_t)) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_CipherUpdate failed");
         return SSH_ERROR;
@@ -1048,9 +1048,11 @@ chacha20_poly1305_aead_decrypt(struct ssh_cipher_struct *cipher,
     }
 
     /* Decrypt the message */
-    rv = EVP_CipherUpdate(ctx->main_evp, out, &len,
+    rv = EVP_CipherUpdate(ctx->main_evp,
+                          out,
+                          &len,
                           (uint8_t *)complete_packet + sizeof(uint32_t),
-                          encrypted_size);
+                          (int)encrypted_size);
     if (rv != 1) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_CipherUpdate failed");
         goto out;
@@ -1117,7 +1119,7 @@ chacha20_poly1305_aead_encrypt(struct ssh_cipher_struct *cipher,
                            out_packet->payload,
                            &outlen,
                            in_packet->payload,
-                           len - sizeof(uint32_t));
+                           (int)(len - sizeof(uint32_t)));
     if (ret != 1) {
         SSH_LOG(SSH_LOG_TRACE, "EVP_CipherUpdate failed");
         return;

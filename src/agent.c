@@ -499,6 +499,7 @@ ssh_string ssh_agent_sign_data(ssh_session session,
     unsigned int type = 0;
     unsigned int flags = 0;
     uint32_t dlen;
+    size_t request_len;
     int rc;
 
     request = ssh_buffer_new();
@@ -524,10 +525,12 @@ ssh_string ssh_agent_sign_data(ssh_session session,
      * - 2 x uint32_t
      * - 1 x ssh_string (uint8_t + data)
      */
-    rc = ssh_buffer_allocate_size(request,
-                                  sizeof(uint8_t) * 2 +
-                                  sizeof(uint32_t) * 2 +
-                                  ssh_string_len(key_blob));
+    request_len = sizeof(uint8_t) * 2 +
+                  sizeof(uint32_t) * 2 +
+                  ssh_string_len(key_blob);
+    /* this can't overflow the uint32_t as the
+     * STRING_SIZE_MAX is (UINT32_MAX >> 8) + 1 */
+    rc = ssh_buffer_allocate_size(request, (uint32_t)request_len);
     if (rc < 0) {
         SSH_BUFFER_FREE(request);
         return NULL;

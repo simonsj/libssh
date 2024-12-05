@@ -406,20 +406,26 @@ void *ssh_buffer_allocate(struct ssh_buffer_struct *buffer, uint32_t len)
  *
  * @return              0 on success, < 0 on error.
  */
-int ssh_buffer_add_ssh_string(struct ssh_buffer_struct *buffer,
-    struct ssh_string_struct *string) {
-  uint32_t len = 0;
+int
+ssh_buffer_add_ssh_string(struct ssh_buffer_struct *buffer,
+                          struct ssh_string_struct *string)
+{
+    size_t len;
+    int rc;
 
-  if (string == NULL) {
-      return -1;
-  }
+    if (string == NULL) {
+        return -1;
+    }
 
-  len = ssh_string_len(string);
-  if (ssh_buffer_add_data(buffer, string, len + sizeof(uint32_t)) < 0) {
-    return -1;
-  }
+    len = ssh_string_len(string) + sizeof(uint32_t);
+    /* this can't overflow the uint32_t as the
+     * STRING_SIZE_MAX is (UINT32_MAX >> 8) + 1 */
+    rc = ssh_buffer_add_data(buffer, string, (uint32_t)len);
+    if (rc < 0) {
+        return -1;
+    }
 
-  return 0;
+    return 0;
 }
 
 /**
@@ -978,19 +984,28 @@ ssh_buffer_pack_va(struct ssh_buffer_struct *buffer,
         case 's':
             cstring = va_arg(ap, char *);
             len = strlen(cstring);
-            rc = ssh_buffer_add_u32(buffer, htonl(len));
+            if (len > UINT32_MAX) {
+                rc = SSH_ERROR;
+                break;
+            }
+            o.dword = (uint32_t)len;
+            rc = ssh_buffer_add_u32(buffer, htonl(o.dword));
             if (rc == SSH_OK){
-                rc = ssh_buffer_add_data(buffer, cstring, len);
+                rc = ssh_buffer_add_data(buffer, cstring, o.dword);
             }
             cstring = NULL;
             break;
         case 'P':
             len = va_arg(ap, size_t);
+            if (len > UINT32_MAX) {
+                rc = SSH_ERROR;
+                break;
+            }
 
             o.data = va_arg(ap, void *);
             count++; /* increase argument count */
 
-            rc = ssh_buffer_add_data(buffer, o.data, len);
+            rc = ssh_buffer_add_data(buffer, o.data, (uint32_t)len);
             o.data = NULL;
             break;
         case 'B':
@@ -1006,7 +1021,11 @@ ssh_buffer_pack_va(struct ssh_buffer_struct *buffer,
         case 't':
             cstring = va_arg(ap, char *);
             len = strlen(cstring);
-            rc = ssh_buffer_add_data(buffer, cstring, len);
+            if (len > UINT32_MAX) {
+                rc = SSH_ERROR;
+                break;
+            }
+            rc = ssh_buffer_add_data(buffer, cstring, (uint32_t)len);
             cstring = NULL;
             break;
         default:
@@ -1186,28 +1205,28 @@ int ssh_buffer_unpack_va(struct ssh_buffer_struct *buffer,
             if (rlen != 4){
                 break;
             }
-            len = ntohl(u32len);
-            if (len > max_len - 1) {
+            u32len = ntohl(u32len);
+            if (u32len > max_len - 1) {
                 break;
             }
 
-            rc = ssh_buffer_validate_length(buffer, len);
+            rc = ssh_buffer_validate_length(buffer, u32len);
             if (rc != SSH_OK) {
                 break;
             }
 
-            *o.cstring = malloc(len + 1);
+            *o.cstring = malloc(u32len + 1);
             if (*o.cstring == NULL){
                 rc = SSH_ERROR;
                 break;
             }
-            rlen = ssh_buffer_get_data(buffer, *o.cstring, len);
-            if (rlen != len){
+            rlen = ssh_buffer_get_data(buffer, *o.cstring, u32len);
+            if (rlen != u32len) {
                 SAFE_FREE(*o.cstring);
                 rc = SSH_ERROR;
                 break;
             }
-            (*o.cstring)[len] = '\0';
+            (*o.cstring)[u32len] = '\0';
             o.cstring = NULL;
             rc = SSH_OK;
             break;
@@ -1232,7 +1251,7 @@ int ssh_buffer_unpack_va(struct ssh_buffer_struct *buffer,
                 rc = SSH_ERROR;
                 break;
             }
-            rlen = ssh_buffer_get_data(buffer, *o.data, len);
+            rlen = ssh_buffer_get_data(buffer, *o.data, (uint32_t)len);
             if (rlen != len){
                 SAFE_FREE(*o.data);
                 rc = SSH_ERROR;

@@ -226,7 +226,7 @@ int ssh_send_banner(ssh_session session, int server)
                  terminator);
     }
 
-    rc = ssh_socket_write(session->socket, buffer, strlen(buffer));
+    rc = ssh_socket_write(session->socket, buffer, (uint32_t)strlen(buffer));
     if (rc == SSH_ERROR) {
         goto end;
     }
@@ -235,8 +235,8 @@ int ssh_send_banner(ssh_session session, int server)
         ssh_pcap_context_write(session->pcap_ctx,
                                SSH_PCAP_DIR_OUT,
                                buffer,
-                               strlen(buffer),
-                               strlen(buffer));
+                               (uint32_t)strlen(buffer),
+                               (uint32_t)strlen(buffer));
     }
 #endif
 

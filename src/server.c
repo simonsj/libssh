@@ -482,8 +482,8 @@ static size_t callback_receive_banner(const void *data, size_t len, void *user)
             ssh_pcap_context_write(session->pcap_ctx,
                                    SSH_PCAP_DIR_IN,
                                    buffer,
-                                   i + 1,
-                                   i + 1);
+                                   (uint32_t)(i + 1),
+                                   (uint32_t)(i + 1));
         }
 #endif
         if (buffer[i] == '\r') {

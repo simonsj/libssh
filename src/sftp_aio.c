@@ -75,7 +75,10 @@ ssize_t sftp_aio_begin_read(sftp_file file, size_t len, sftp_aio *aio)
 
     /* Apply a cap on the length a user is allowed to read */
     if (len > sftp->limits->max_read_length) {
-        len = sftp->limits->max_read_length;
+        if (sftp->limits->max_read_length > SIZE_MAX) {
+            return SSH_ERROR;
+        }
+        len = (size_t)sftp->limits->max_read_length;
     }
 
     if (aio == NULL) {
@@ -337,7 +340,10 @@ ssize_t sftp_aio_begin_write(sftp_file file,
 
     /* Apply a cap on the length a user is allowed to write */
     if (len > sftp->limits->max_write_length) {
-        len = sftp->limits->max_write_length;
+        if (sftp->limits->max_write_length > SIZE_MAX) {
+            return SSH_ERROR;
+        }
+        len = (size_t)sftp->limits->max_write_length;
     }
 
     if (aio == NULL) {

@@ -592,7 +592,7 @@ int ssh_dh_compute_shared_secret(struct dh_ctx *dh_ctx, int local, int remote,
     }
 #endif /* OPENSSL_VERSION_NUMBER */
 
-    *dest = BN_bin2bn(kstring, klen, NULL);
+    *dest = BN_bin2bn(kstring, (int)klen, NULL);
     if (*dest == NULL) {
         rc = SSH_ERROR;
         goto done;

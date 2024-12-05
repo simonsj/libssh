@@ -155,7 +155,7 @@ static int pki_private_key_decrypt(ssh_string blob,
     }
     rc = ssh_buffer_add_data(buffer,
                              ssh_string_data(kdfoptions),
-                             ssh_string_len(kdfoptions));
+                             (uint32_t)ssh_string_len(kdfoptions));
     if (rc != SSH_ERROR){
         rc = ssh_buffer_unpack(buffer, "Sd", &salt, &rounds);
     }
@@ -339,7 +339,7 @@ ssh_pki_openssh_import(const char *text_key,
     ssh_buffer_set_secure(privkey_buffer);
     ssh_buffer_add_data(privkey_buffer,
                         ssh_string_data(privkeys),
-                        ssh_string_len(privkeys));
+                        (uint32_t)ssh_string_len(privkeys));
 
     rc = ssh_buffer_unpack(privkey_buffer, "dd", &checkint1, &checkint2);
     if (rc == SSH_ERROR || checkint1 != checkint2) {

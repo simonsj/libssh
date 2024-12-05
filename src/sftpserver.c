@@ -787,8 +787,8 @@ stat_to_filexfer_attrib(const struct stat *z_st, struct sftp_attributes_struct *
     z_attr->permissions = z_st->st_mode;
 
     z_attr->flags |= (uint32_t)SSH_FILEXFER_ATTR_ACMODTIME;
-    z_attr->atime = z_st->st_atime;
-    z_attr->mtime = z_st->st_mtime;
+    z_attr->atime = (uint32_t)z_st->st_atime;
+    z_attr->mtime = (uint32_t)z_st->st_mtime;
 }
 
 static void

@@ -1829,7 +1829,7 @@ int ssh_quote_file_name(const char *file_name, char *buf, size_t buf_len)
     /* Put the string terminator */
     *dst = '\0';
 
-    return dst - buf;
+    return (int)(dst - buf);
 
 error:
     return SSH_ERROR;
@@ -1875,7 +1875,7 @@ int ssh_newline_vis(const char *string, char *buf, size_t buf_len)
     }
     *out = '\0';
 
-    return out - buf;
+    return (int)(out - buf);
 }
 
 /**

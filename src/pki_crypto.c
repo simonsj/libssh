@@ -86,7 +86,7 @@ static int pem_get_password(char *buf, int size, int rwflag, void *userdata) {
                      buf, size, 0, 0,
                      pgp->data);
         if (rc == 0) {
-            return strlen(buf);
+            return (int)strlen(buf);
         }
     }
 
@@ -1869,7 +1869,7 @@ static ssh_string pki_ecdsa_signature_to_blob(const ssh_signature sig)
     const BIGNUM *pr = NULL, *ps = NULL;
 
     const unsigned char *raw_sig_data = NULL;
-    size_t raw_sig_len;
+    long raw_sig_len;
 
     ECDSA_SIG *ecdsa_sig;
 
@@ -1882,7 +1882,7 @@ static ssh_string pki_ecdsa_signature_to_blob(const ssh_signature sig)
     if (raw_sig_data == NULL) {
         return NULL;
     }
-    raw_sig_len = ssh_string_len(sig->raw_sig);
+    raw_sig_len = (long)ssh_string_len(sig->raw_sig);
 
     ecdsa_sig = d2i_ECDSA_SIG(NULL, &raw_sig_data, raw_sig_len);
     if (ecdsa_sig == NULL) {
@@ -1977,7 +1977,7 @@ static int pki_signature_from_rsa_blob(const ssh_key pubkey,
                                        const ssh_string sig_blob,
                                        ssh_signature sig)
 {
-    uint32_t pad_len = 0;
+    size_t pad_len = 0;
     char *blob_orig = NULL;
     char *blob_padded_data = NULL;
     ssh_string sig_blob_padded = NULL;
@@ -2080,7 +2080,7 @@ static int pki_signature_from_ecdsa_blob(UNUSED_PARAM(const ssh_key pubkey),
 
     rc = ssh_buffer_add_data(buf,
                              ssh_string_data(sig_blob),
-                             ssh_string_len(sig_blob));
+                             (uint32_t)ssh_string_len(sig_blob));
     if (rc < 0) {
         goto error;
     }
@@ -2511,7 +2511,7 @@ int pki_verify_data_signature(ssh_signature signature,
     EVP_PKEY *pkey = NULL;
 
     unsigned char *raw_sig_data = NULL;
-    unsigned int raw_sig_len;
+    size_t raw_sig_len;
 
     /* Function return code
      * Do not change this variable throughout the function until the signature

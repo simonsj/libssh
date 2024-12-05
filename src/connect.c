@@ -209,7 +209,8 @@ socket_t ssh_connect_host_nonblocking(ssh_session session, const char *host,
                  bind_itr != NULL;
                  bind_itr = bind_itr->ai_next)
             {
-                if (bind(s, bind_itr->ai_addr, bind_itr->ai_addrlen) < 0) {
+                rc = bind(s, bind_itr->ai_addr, bind_itr->ai_addrlen);
+                if (rc < 0) {
                     ssh_set_error(session, SSH_FATAL,
                                   "Binding local address: %s",
                                   ssh_strerror(errno, err_msg, SSH_ERRNO_MSG_MAX));

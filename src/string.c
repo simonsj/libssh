@@ -67,7 +67,7 @@ struct ssh_string_struct *ssh_string_new(size_t size)
         return NULL;
     }
 
-    str->size = htonl(size);
+    str->size = htonl((uint32_t)size);
     str->data[0] = 0;
 
     return str;

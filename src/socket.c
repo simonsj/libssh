@@ -312,7 +312,8 @@ int ssh_socket_pollcallback(struct ssh_poll_handle_struct *p,
         }
 
         /* Rollback the unused space */
-        ssh_buffer_pass_bytes_end(s->in_buffer, MAX_BUF_SIZE - nread);
+        ssh_buffer_pass_bytes_end(s->in_buffer,
+                                  (uint32_t)(MAX_BUF_SIZE - nread));
 
         if (nread == 0) {
             if (p != NULL) {
@@ -337,7 +338,7 @@ int ssh_socket_pollcallback(struct ssh_poll_handle_struct *p,
                 processed = s->callbacks->data(ssh_buffer_get(s->in_buffer),
                                                ssh_buffer_get_len(s->in_buffer),
                                                s->callbacks->userdata);
-                ssh_buffer_pass_bytes(s->in_buffer, processed);
+                ssh_buffer_pass_bytes(s->in_buffer, (uint32_t)processed);
             } while ((processed > 0) && (s->state == SSH_SOCKET_CONNECTED));
 
             /* p may have been freed, so don't use it
@@ -742,7 +743,7 @@ int ssh_socket_nonblocking_flush(ssh_socket s)
             return SSH_ERROR;
         }
 
-        ssh_buffer_pass_bytes(s->out_buffer, bwritten);
+        ssh_buffer_pass_bytes(s->out_buffer, (uint32_t)bwritten);
         if (s->session->socket_counter != NULL) {
             s->session->socket_counter->out_bytes += bwritten;
         }

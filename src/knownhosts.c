@@ -171,7 +171,7 @@ static int known_hosts_read_line(FILE *fp,
                                  size_t *buf_len,
                                  size_t *lineno)
 {
-    while (fgets(buf, buf_size, fp) != NULL) {
+    while (fgets(buf, (int)buf_size, fp) != NULL) {
         size_t len;
         if (buf[0] == '\0') {
             continue;

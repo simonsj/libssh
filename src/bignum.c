@@ -74,7 +74,7 @@ bignum ssh_make_string_bn(ssh_string string)
             len * 8, len);
 #endif /* DEBUG_CRYPTO */
 
-    bignum_bin2bn(string->data, len, &bn);
+    bignum_bin2bn(string->data, (int)len, &bn);
 
     return bn;
 }

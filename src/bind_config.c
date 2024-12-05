@@ -669,7 +669,8 @@ int ssh_bind_config_parse_string(ssh_bind bind, const char *input)
 {
     char line[MAX_LINE_SIZE] = {0};
     const char *c = input, *line_start = input;
-    unsigned int line_num = 0, line_len;
+    unsigned int line_num = 0;
+    size_t line_len;
     uint32_t parser_flags;
     int rv;
 
@@ -698,8 +699,10 @@ int ssh_bind_config_parse_string(ssh_bind bind, const char *input)
         }
         line_len = c - line_start;
         if (line_len > MAX_LINE_SIZE - 1) {
-            SSH_LOG(SSH_LOG_WARN, "Line %u too long: %u characters",
-                    line_num, line_len);
+            SSH_LOG(SSH_LOG_WARN,
+                    "Line %u too long: %zu characters",
+                    line_num,
+                    line_len);
             return SSH_ERROR;
         }
         memcpy(line, line_start, line_len);
