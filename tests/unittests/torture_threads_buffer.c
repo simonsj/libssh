@@ -307,7 +307,7 @@ static void *thread_ssh_buffer_add_format(void *threadid)
                          q,
                          s,
                          "rocks",
-                         7,
+                         (size_t)7,
                          "So much",
                          "Fun!");
     assert_int_equal(rc, SSH_OK);

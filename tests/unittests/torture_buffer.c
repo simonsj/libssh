@@ -154,7 +154,7 @@ static void torture_ssh_buffer_add_format(void **state) {
     d=0xbadc0de;
     q=0x13243546acbdcedf;
     s=ssh_string_from_char("libssh");
-    rc=ssh_buffer_pack(buffer, "bwdqSsPt",b,w,d,q,s,"rocks",7,"So much","Fun!");
+    rc=ssh_buffer_pack(buffer, "bwdqSsPt",b,w,d,q,s,"rocks",(size_t)7,"So much","Fun!");
     assert_int_equal(rc, SSH_OK);
 
     len = ssh_buffer_get_len(buffer);
