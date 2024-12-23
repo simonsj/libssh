@@ -740,6 +740,11 @@ static const char torture_ed25519_public_testkey[] =
     "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBWWnxuCYiOyvMYLtkgoEyEKlLV+klM+"
     "BU6Nh3PmAiqX aris@kalix86";
 
+static const char torture_ed25519_public_testkey_pem[] =
+    "-----BEGIN PUBLIC KEY-----\n"
+    "MCowBQYDK2VwAyEAFZafG4JiI7K8xgu2SCgTIQqUtX6SUz4FTo2Hc+YCKpc=\n"
+    "-----END PUBLIC KEY-----\n";
+
 static const char torture_ed25519_testkey_cert[] =
     "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC1lZDI1NTE5LWNlcnQtdjAxQ"
     "G9wZW5zc2guY29tAAAAILrR4sPB+b6BRId/OkQha9nWwoACXqUTILz1TrmG4R9CAAA"
@@ -783,8 +788,7 @@ torture_get_testkey_public_internal(enum ssh_keytypes_e type,
         if (format == FORMAT_OPENSSH) {
             return torture_ed25519_public_testkey;
         }
-        /* not available in other formats */
-        return NULL;
+        return torture_ed25519_public_testkey_pem;
     case SSH_KEYTYPE_DSS_CERT01:
         return torture_dsa_testkey_cert;
     case SSH_KEYTYPE_RSA_CERT01:
