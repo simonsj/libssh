@@ -1520,7 +1520,7 @@ static int pki_import_pubkey_buffer(ssh_buffer buffer,
         case SSH_KEYTYPE_RSA1:
         case SSH_KEYTYPE_UNKNOWN:
         default:
-            SSH_LOG(SSH_LOG_TRACE, "Unknown public key protocol %d", type);
+            SSH_LOG(SSH_LOG_TRACE, "Unknown public key type %d", type);
             goto fail;
     }
 
