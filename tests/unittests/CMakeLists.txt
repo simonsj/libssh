@@ -75,6 +75,12 @@ if (UNIX AND NOT WIN32)
             torture_pki_rsa_uri
             torture_pki_ecdsa_uri
         )
+        if (WITH_PKCS11_PROVIDER)
+            set(LIBSSH_UNIT_TESTS
+                ${LIBSSH_UNIT_TESTS}
+                torture_pki_ed25519_uri
+            )
+        endif()
         list(APPEND TORTURE_UNIT_ENVIRONMENT PKCS11_PROVIDER_DEBUG=file:/tmp/p11prov-debug.log)
     endif()
 
