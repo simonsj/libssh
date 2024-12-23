@@ -128,6 +128,11 @@ static void torture_pki_ed25519_import_privkey_base64(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     key_str = torture_pki_read_file(LIBSSH_ED25519_TESTKEY);
     assert_non_null(key_str);
 
@@ -159,6 +164,11 @@ static void torture_pki_ed25519_import_privkey_base64_comment(void **state)
     enum ssh_keytypes_e type;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     key_str = torture_pki_read_file(LIBSSH_ED25519_TESTKEY);
     assert_non_null(key_str);
@@ -199,6 +209,11 @@ static void torture_pki_ed25519_import_privkey_base64_whitespace(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     key_str = torture_pki_read_file(LIBSSH_ED25519_TESTKEY);
     assert_non_null(key_str);
 
@@ -236,6 +251,11 @@ static void torture_pki_ed25519_import_export_privkey_base64(void **state)
     int rc;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     rc = ssh_pki_import_privkey_base64(torture_get_openssh_testkey(SSH_KEYTYPE_ED25519,
                                                                    false),
@@ -288,6 +308,11 @@ static void torture_pki_ed25519_publickey_from_privatekey(void **state)
     const char *keystring = NULL;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     keystring = torture_get_openssh_testkey(SSH_KEYTYPE_ED25519, 0);
     rc = ssh_pki_import_privkey_base64(keystring,
@@ -345,6 +370,11 @@ static void torture_pki_ed25519_publickey_base64(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     key_buf = strdup(torture_get_testkey_pub(SSH_KEYTYPE_ED25519));
     assert_non_null(key_buf);
 
@@ -387,6 +417,11 @@ static void torture_pki_ed25519_generate_pubkey_from_privkey(void **state)
     int len;
 
     (void)state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     /* remove the public key, generate it from the private key and write it. */
     unlink(LIBSSH_ED25519_TESTKEY ".pub");
@@ -919,6 +954,11 @@ static void torture_pki_ed25519_import_privkey_base64_passphrase(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     /* same for ED25519 */
     testkey = torture_get_openssh_testkey(SSH_KEYTYPE_ED25519, 1);
     rc = ssh_pki_import_privkey_base64(testkey,
@@ -954,6 +994,11 @@ static void torture_pki_ed25519_privkey_dup(void **state)
 
     (void) state; /* unused */
 
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
+
     testkey = torture_get_openssh_testkey(SSH_KEYTYPE_ED25519, 1);
     rc = ssh_pki_import_privkey_base64(testkey,
                                        passphrase,
@@ -983,6 +1028,11 @@ static void torture_pki_ed25519_pubkey_dup(void **state)
     int rc;
 
     (void) state; /* unused */
+
+    /* Skip test if in FIPS mode */
+    if (ssh_fips_mode()) {
+        skip();
+    }
 
     pub_str = strdup(p + 1);
     assert_non_null(pub_str);

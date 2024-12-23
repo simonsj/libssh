@@ -650,14 +650,21 @@ void torture_setup_create_libssh_config(void **state)
     char sshd_path[1024];
     const char *additional_config = NULL;
     struct stat sb;
-    const char config_string[]=
-             "LogLevel DEBUG3\n"
-             "Port 22\n"
-             "ListenAddress 127.0.0.10\n"
-             "%s %s\n"
-             "%s %s\n"
-             "%s %s\n"
-             "%s\n"; /* The space for test-specific options */
+    const char config_string[] =
+        "LogLevel DEBUG3\n"
+        "Port 22\n"
+        "ListenAddress 127.0.0.10\n"
+        "%s %s\n"
+        "%s %s\n"
+        "%s %s\n"
+        "%s\n"; /* The space for test-specific options */
+    const char fips_config_string[] =
+        "LogLevel DEBUG3\n"
+        "Port 22\n"
+        "ListenAddress 127.0.0.10\n"
+        "%s %s\n"
+        "%s %s\n"
+        "%s\n"; /* The space for test-specific options */
     bool written = false;
     int rc;
 
@@ -705,12 +712,27 @@ void torture_setup_create_libssh_config(void **state)
     additional_config = (s->srv_additional_config != NULL ?
                          s->srv_additional_config : "");
 
-    snprintf(sshd_config, sizeof(sshd_config),
-            config_string,
-            "HostKey", ed25519_hostkey,
-            "HostKey", rsa_hostkey,
-            "HostKey", ecdsa_hostkey,
-            additional_config);
+    if (ssh_fips_mode()) {
+        snprintf(sshd_config,
+                 sizeof(sshd_config),
+                 fips_config_string,
+                 "HostKey",
+                 rsa_hostkey,
+                 "HostKey",
+                 ecdsa_hostkey,
+                 additional_config);
+    } else {
+        snprintf(sshd_config,
+                 sizeof(sshd_config),
+                 config_string,
+                 "HostKey",
+                 ed25519_hostkey,
+                 "HostKey",
+                 rsa_hostkey,
+                 "HostKey",
+                 ecdsa_hostkey,
+                 additional_config);
+    }
 
     torture_write_file(s->srv_config, sshd_config);
 }

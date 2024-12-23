@@ -2155,11 +2155,20 @@ torture_bind_options_import_key(void **state)
     /* set ed25519 key */
     base64_key = torture_get_openssh_testkey(SSH_KEYTYPE_ED25519, 0);
     rc = ssh_pki_import_privkey_base64(base64_key, NULL, NULL, NULL, &key);
-    assert_int_equal(rc, SSH_OK);
-    assert_non_null(key);
+    if (ssh_fips_mode()) {
+        assert_int_equal(rc, SSH_ERROR);
+        assert_null(key);
+    } else {
+        assert_int_equal(rc, SSH_OK);
+        assert_non_null(key);
+    }
 
     rc = ssh_bind_options_set(bind, SSH_BIND_OPTIONS_IMPORT_KEY, key);
-    assert_int_equal(rc, 0);
+    if (ssh_fips_mode()) {
+        assert_int_equal(rc, SSH_ERROR);
+    } else {
+        assert_int_equal(rc, 0);
+    }
 
     /* set rsa key */
     base64_key = torture_get_testkey(SSH_KEYTYPE_RSA, 0);
@@ -2208,7 +2217,11 @@ torture_bind_options_import_key_str(void **state)
 
     rc =
         ssh_bind_options_set(bind, SSH_BIND_OPTIONS_IMPORT_KEY_STR, base64_key);
-    assert_int_equal(rc, 0);
+    if (ssh_fips_mode()) {
+        assert_int_equal(rc, SSH_ERROR);
+    } else {
+        assert_int_equal(rc, 0);
+    }
 
     /* set rsa key */
     base64_key = torture_get_testkey(SSH_KEYTYPE_RSA, 0);
@@ -2250,9 +2263,14 @@ static void torture_bind_options_hostkey(void **state)
     rc = ssh_bind_options_set(bind,
                               SSH_BIND_OPTIONS_HOSTKEY,
                               LIBSSH_ED25519_TESTKEY);
-    assert_int_equal(rc, 0);
-    assert_non_null(bind->ed25519key);
-    assert_string_equal(bind->ed25519key, LIBSSH_ED25519_TESTKEY);
+    if (ssh_fips_mode()) {
+        assert_int_equal(rc, SSH_ERROR);
+        assert_null(bind->ed25519key);
+    } else {
+        assert_int_equal(rc, 0);
+        assert_non_null(bind->ed25519key);
+        assert_string_equal(bind->ed25519key, LIBSSH_ED25519_TESTKEY);
+    }
 
 #ifdef HAVE_ECC
     /* Test ECDSA key */
