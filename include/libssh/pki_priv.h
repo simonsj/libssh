@@ -148,6 +148,7 @@ int pki_signature_from_ed25519_blob(ssh_signature sig, ssh_string sig_blob);
 int pki_privkey_build_ed25519(ssh_key key,
                               ssh_string pubkey,
                               ssh_string privkey);
+int pki_pubkey_build_ed25519(ssh_key key, ssh_string pubkey);
 
 /* PKI Container OpenSSH */
 ssh_key ssh_pki_openssh_pubkey_import(const char *text_key);

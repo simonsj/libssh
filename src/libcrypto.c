@@ -1543,6 +1543,12 @@ int evp_dup_ecdsa_pkey(const ssh_key key, ssh_key new_key, int demote)
 {
     return evp_dup_pkey("EC", key, demote, new_key);
 }
+
+int evp_dup_ed25519_pkey(const ssh_key key, ssh_key new_key, int demote)
+{
+    return evp_dup_pkey("ED25519", key, demote, new_key);
+}
+
 #endif /* OPENSSL_VERSION_NUMBER */
 
 ssh_string

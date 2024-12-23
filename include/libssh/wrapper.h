@@ -129,6 +129,7 @@ int evp_build_pkey(const char* name, OSSL_PARAM_BLD *param_bld, EVP_PKEY **pkey,
 int evp_dup_dsa_pkey(const ssh_key key, ssh_key new_key, int demote);
 int evp_dup_rsa_pkey(const ssh_key key, ssh_key new_key, int demote);
 int evp_dup_ecdsa_pkey(const ssh_key key, ssh_key new_key, int demote);
+int evp_dup_ed25519_pkey(const ssh_key key, ssh_key new_key, int demote);
 #endif /* HAVE_LIBCRYPTO && OPENSSL_VERSION_NUMBER */
 
 #ifdef __cplusplus

@@ -63,11 +63,9 @@ struct ssh_key_struct {
     mbedtls_pk_context *pk;
     mbedtls_ecdsa_context *ecdsa;
 #elif defined(HAVE_LIBCRYPTO)
-    /* This holds either ENGINE key for PKCS#11 support or just key in
-     * high-level format */
+    /* This holds either ENGINE/PROVIDER key for PKCS#11 support
+     * or just key in high-level format */
     EVP_PKEY *key;
-    uint8_t *ed25519_pubkey;
-    uint8_t *ed25519_privkey;
 #endif /* HAVE_LIBGCRYPT */
 #ifndef HAVE_LIBCRYPTO
     ed25519_pubkey *ed25519_pubkey;

@@ -143,18 +143,13 @@ void ssh_key_clean (ssh_key key)
 
     pki_key_clean(key);
 
-    if (key->ed25519_privkey != NULL){
-#ifdef HAVE_LIBCRYPTO
-        /* In OpenSSL implementation the private key is only the private
-         * original seed. In the internal implementation the private key is the
-         * concatenation of the original private seed with the public key.*/
-        explicit_bzero(key->ed25519_privkey, ED25519_KEY_LEN);
-#else
+#ifndef HAVE_LIBCRYPTO
+    if (key->ed25519_privkey != NULL) {
         explicit_bzero(key->ed25519_privkey, sizeof(ed25519_privkey));
-#endif /* HAVE_LIBCRYPTO*/
         SAFE_FREE(key->ed25519_privkey);
     }
     SAFE_FREE(key->ed25519_pubkey);
+#endif /* HAVE_LIBCRYPTO */
     if (key->cert != NULL) {
         SSH_BUFFER_FREE(key->cert);
     }
@@ -701,10 +696,12 @@ int ssh_key_cmp(const ssh_key k1,
                       ssh_buffer_get_len(k1->cert));
     }
 
+#ifndef HAVE_LIBCRYPTO
     if (k1->type == SSH_KEYTYPE_ED25519 ||
         k1->type == SSH_KEYTYPE_SK_ED25519) {
         return pki_ed25519_key_cmp(k1, k2, what);
     }
+#endif
 
     return pki_key_compare(k1, k2, what);
 }
@@ -1489,16 +1486,13 @@ static int pki_import_pubkey_buffer(ssh_buffer buffer,
                 goto fail;
             }
 
-            key->ed25519_pubkey = malloc(ED25519_KEY_LEN);
-            if (key->ed25519_pubkey == NULL) {
-                ssh_string_burn(pubkey);
-                SSH_STRING_FREE(pubkey);
-                goto fail;
-            }
-
-            memcpy(key->ed25519_pubkey, ssh_string_data(pubkey), ED25519_KEY_LEN);
+            rc = pki_pubkey_build_ed25519(key, pubkey);
             ssh_string_burn(pubkey);
             SSH_STRING_FREE(pubkey);
+            if (rc < 0) {
+                SSH_LOG(SSH_LOG_TRACE, "Failed to build ED25519 public key");
+                goto fail;
+            }
 
             if (type == SSH_KEYTYPE_SK_ED25519) {
                 ssh_string application = ssh_buffer_get_ssh_string(buffer);

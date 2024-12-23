@@ -415,6 +415,59 @@ err:
 }
 #endif /* HAVE_OPENSSL_ECC */
 
+int pki_privkey_build_ed25519(ssh_key key,
+                              ssh_string pubkey,
+                              ssh_string privkey)
+{
+    EVP_PKEY *pkey = NULL;
+
+    if (ssh_string_len(pubkey) != ED25519_KEY_LEN ||
+        ssh_string_len(privkey) != (2 * ED25519_KEY_LEN)) {
+        SSH_LOG(SSH_LOG_TRACE, "Invalid ed25519 key len");
+        return SSH_ERROR;
+    }
+
+    pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519,
+                                        NULL,
+                                        (const uint8_t *)ssh_string_data(privkey),
+                                        ED25519_KEY_LEN);
+    if (pkey == NULL) {
+        SSH_LOG(SSH_LOG_TRACE,
+                "Failed to create ed25519 EVP_PKEY: %s",
+                ERR_error_string(ERR_get_error(), NULL));
+        return SSH_ERROR;
+    }
+
+    key->key = pkey;
+
+    return SSH_OK;
+}
+
+int pki_pubkey_build_ed25519(ssh_key key, ssh_string pubkey)
+{
+    EVP_PKEY *pkey = NULL;
+
+    if (ssh_string_len(pubkey) != ED25519_KEY_LEN) {
+        SSH_LOG(SSH_LOG_TRACE, "Invalid ed25519 key len");
+        return SSH_ERROR;
+    }
+
+    pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519,
+                                       NULL,
+                                       (const uint8_t *)ssh_string_data(pubkey),
+                                       ED25519_KEY_LEN);
+    if (pkey == NULL) {
+        SSH_LOG(SSH_LOG_TRACE,
+                "Failed to create ed25519 EVP_PKEY: %s",
+                ERR_error_string(ERR_get_error(), NULL));
+        return SSH_ERROR;
+    }
+
+    key->key = pkey;
+
+    return SSH_OK;
+}
+
 ssh_key pki_key_dup(const ssh_key key, int demote)
 {
     ssh_key new = NULL;
@@ -651,7 +704,7 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
         break;
 #endif /* HAVE_OPENSSL_ECC */
     case SSH_KEYTYPE_ED25519:
-        rc = pki_ed25519_key_dup(new, key);
+        rc = evp_dup_ed25519_pkey(key, new, demote);
         if (rc != SSH_OK) {
             goto fail;
         }
@@ -865,14 +918,13 @@ int pki_key_compare(const ssh_key k1, const ssh_key k2, enum ssh_keycmp_e what)
 #endif /* OPENSSL_VERSION_NUMBER */
     case SSH_KEYTYPE_RSA:
     case SSH_KEYTYPE_RSA1:
+    case SSH_KEYTYPE_ED25519:
+    case SSH_KEYTYPE_SK_ED25519:
         rc = EVP_PKEY_eq(k1->key, k2->key);
         if (rc != 1) {
             return 1;
         }
         break;
-    case SSH_KEYTYPE_ED25519:
-    case SSH_KEYTYPE_SK_ED25519:
-        /* ed25519 keys handled globally */
     case SSH_KEYTYPE_UNKNOWN:
     default:
         return 1;
@@ -902,6 +954,7 @@ ssh_string pki_private_key_to_pem(const ssh_key key,
     case SSH_KEYTYPE_ECDSA_P256:
     case SSH_KEYTYPE_ECDSA_P384:
     case SSH_KEYTYPE_ECDSA_P521:
+    case SSH_KEYTYPE_ED25519:
         rc = EVP_PKEY_up_ref(key->key);
         if (rc != 1) {
             goto err;
@@ -911,24 +964,6 @@ ssh_string pki_private_key_to_pem(const ssh_key key,
         /* Mark the operation as successful as for the other key types */
         rc = 1;
 
-        break;
-    case SSH_KEYTYPE_ED25519:
-        /* In OpenSSL, the input is the private key seed only, which means
-         * the first half of the SSH private key (the second half is the
-         * public key) */
-        pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519,
-                                            NULL,
-                                            (const uint8_t *)key->ed25519_privkey,
-                                            ED25519_KEY_LEN);
-        if (pkey == NULL) {
-            SSH_LOG(SSH_LOG_TRACE,
-                    "Failed to create ed25519 EVP_PKEY: %s",
-                    ERR_error_string(ERR_get_error(), NULL));
-            goto err;
-        }
-
-        /* Mark the operation as successful as for the other key types */
-        rc = 1;
         break;
     case SSH_KEYTYPE_RSA_CERT01:
     case SSH_KEYTYPE_ECDSA_P256_CERT01:
@@ -1008,8 +1043,6 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
     EC_KEY *ecdsa = NULL;
 #endif /* OPENSSL_VERSION_NUMBER */
-    uint8_t *ed25519 = NULL;
-    uint8_t *ed25519_pubkey = NULL;
     ssh_key key = NULL;
     enum ssh_keytypes_e type = SSH_KEYTYPE_UNKNOWN;
     EVP_PKEY *pkey = NULL;
@@ -1068,57 +1101,8 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
         break;
 #endif /* HAVE_OPENSSL_ECC */
     case EVP_PKEY_ED25519:
-    {
-        size_t key_len;
-        int evp_rc = 0;
-
-        /* Get the key length */
-        evp_rc = EVP_PKEY_get_raw_private_key(pkey, NULL, &key_len);
-        if (evp_rc != 1) {
-            SSH_LOG(SSH_LOG_TRACE,
-                    "Failed to get ed25519 raw private key length:  %s",
-                    ERR_error_string(ERR_get_error(), NULL));
-            goto fail;
-        }
-
-        if (key_len != ED25519_KEY_LEN) {
-            goto fail;
-        }
-
-        ed25519 = malloc(key_len);
-        if (ed25519 == NULL) {
-            SSH_LOG(SSH_LOG_TRACE, "Out of memory");
-            goto fail;
-        }
-
-        evp_rc = EVP_PKEY_get_raw_private_key(pkey, (uint8_t *)ed25519,
-                                              &key_len);
-        if (evp_rc != 1) {
-            SSH_LOG(SSH_LOG_TRACE,
-                    "Failed to get ed25519 raw private key:  %s",
-                    ERR_error_string(ERR_get_error(), NULL));
-            goto fail;
-        }
-
-        /* length matches the private key length */
-        ed25519_pubkey = malloc(ED25519_KEY_LEN);
-        if (ed25519_pubkey == NULL) {
-            SSH_LOG(SSH_LOG_TRACE, "Out of memory");
-            goto fail;
-        }
-
-        evp_rc = EVP_PKEY_get_raw_public_key(pkey, (uint8_t *)ed25519_pubkey,
-                                             &key_len);
-        if (evp_rc != 1) {
-            SSH_LOG(SSH_LOG_TRACE,
-                    "Failed to get ed25519 raw public key:  %s",
-                    ERR_error_string(ERR_get_error(), NULL));
-            goto fail;
-        }
         type = SSH_KEYTYPE_ED25519;
-
-    }
-    break;
+        break;
     default:
         SSH_LOG(SSH_LOG_TRACE, "Unknown or invalid private key type %d",
                 EVP_PKEY_base_id(pkey));
@@ -1135,8 +1119,6 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
     key->type_c = ssh_key_type_to_char(type);
     key->flags = SSH_KEY_FLAG_PRIVATE | SSH_KEY_FLAG_PUBLIC;
     key->key = pkey;
-    key->ed25519_privkey = ed25519;
-    key->ed25519_pubkey = ed25519_pubkey;
 #ifdef HAVE_OPENSSL_ECC
     if (is_ecdsa_key_type(key->type)) {
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
@@ -1151,8 +1133,6 @@ ssh_key pki_private_key_from_base64(const char *b64_key,
 fail:
     EVP_PKEY_free(pkey);
     ssh_key_free(key);
-    SAFE_FREE(ed25519);
-    SAFE_FREE(ed25519_pubkey);
     return NULL;
 }
 
@@ -1408,8 +1388,8 @@ fail:
 
 ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
 {
-    ssh_buffer buffer;
-    ssh_string type_s;
+    ssh_buffer buffer = NULL;
+    ssh_string type_s = NULL;
     ssh_string str = NULL;
     ssh_string e = NULL;
     ssh_string n = NULL;
@@ -1425,6 +1405,9 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
            *bd = NULL, *biqmp = NULL;
     OSSL_PARAM *params = NULL;
 #endif /* OPENSSL_VERSION_NUMBER */
+    uint8_t *ed25519_pubkey = NULL;
+    uint8_t *ed25519_privkey = NULL;
+    size_t key_len = 0;
 
     buffer = ssh_buffer_new();
     if (buffer == NULL) {
@@ -1632,11 +1615,94 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
         }
         case SSH_KEYTYPE_ED25519:
         case SSH_KEYTYPE_SK_ED25519:
-            if (type == SSH_KEY_PUBLIC) {
-                rc = pki_ed25519_public_key_to_blob(buffer, key);
-                if (rc == SSH_ERROR){
+            rc = EVP_PKEY_get_raw_public_key(key->key, NULL, &key_len);
+            if (rc != 1) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Failed to get ed25519 raw public key length: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                goto fail;
+            }
+
+            if (key_len != ED25519_KEY_LEN) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Unexpected length of private key %zu. Expected %d.",
+                        key_len,
+                        ED25519_KEY_LEN);
+                goto fail;
+            }
+
+            ed25519_pubkey = malloc(key_len);
+            if (ed25519_pubkey == NULL) {
+                SSH_LOG(SSH_LOG_TRACE, "Out of memory");
+                goto fail;
+            }
+
+            rc = EVP_PKEY_get_raw_public_key(key->key,
+                                             (uint8_t *)ed25519_pubkey,
+                                             &key_len);
+            if (rc != 1) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Failed to get ed25519 raw public key:  %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                goto fail;
+            }
+
+            rc = ssh_buffer_pack(buffer,
+                                 "dP",
+                                 (uint32_t)ED25519_KEY_LEN,
+                                 (size_t)ED25519_KEY_LEN,
+                                 ed25519_pubkey);
+            if (rc == SSH_ERROR) {
+                goto fail;
+            }
+
+            if (type == SSH_KEY_PRIVATE) {
+                key_len = 0;
+                rc = EVP_PKEY_get_raw_private_key(key->key, NULL, &key_len);
+                if (rc != 1) {
+                    SSH_LOG(SSH_LOG_TRACE,
+                            "Failed to get ed25519 raw private key length: %s",
+                            ERR_error_string(ERR_get_error(), NULL));
                     goto fail;
                 }
+
+                if (key_len != ED25519_KEY_LEN) {
+                    SSH_LOG(SSH_LOG_TRACE,
+                            "Unexpected length of private key %zu. Expected %d.",
+                            key_len,
+                            ED25519_KEY_LEN);
+                    goto fail;
+                }
+
+                ed25519_privkey = malloc(key_len);
+                if (ed25519_privkey == NULL) {
+                    SSH_LOG(SSH_LOG_TRACE, "Out of memory");
+                    goto fail;
+                }
+
+                rc = EVP_PKEY_get_raw_private_key(key->key,
+                                                  ed25519_privkey,
+                                                  &key_len);
+                if (rc != 1) {
+                    SSH_LOG(SSH_LOG_TRACE,
+                            "Failed to get ed25519 raw private key: %s",
+                            ERR_error_string(ERR_get_error(), NULL));
+                    goto fail;
+                }
+
+                rc = ssh_buffer_pack(buffer,
+                                     "dPP",
+                                     (uint32_t)(2 * ED25519_KEY_LEN),
+                                     (size_t)ED25519_KEY_LEN,
+                                     ed25519_privkey,
+                                     (size_t)ED25519_KEY_LEN,
+                                     ed25519_pubkey);
+                if (rc == SSH_ERROR) {
+                    goto fail;
+                }
+                explicit_bzero(ed25519_privkey, ED25519_KEY_LEN);
+                SAFE_FREE(ed25519_privkey);
+            } else {
                 /* public key can contain certificate sk information */
                 if (key->type == SSH_KEYTYPE_SK_ED25519) {
                     rc = ssh_buffer_add_ssh_string(buffer, key->sk_application);
@@ -1644,12 +1710,8 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
                         goto fail;
                     }
                 }
-            } else {
-                rc = pki_ed25519_private_key_to_blob(buffer, key);
-                if (rc == SSH_ERROR){
-                    goto fail;
-                }
             }
+            SAFE_FREE(ed25519_pubkey);
             break;
         case SSH_KEYTYPE_ECDSA_P256:
         case SSH_KEYTYPE_ECDSA_P384:
@@ -1849,6 +1911,11 @@ fail:
     bignum_safe_free(biqmp);
     OSSL_PARAM_free(params);
 #endif /* OPENSSL_VERSION_NUMBER */
+    free(ed25519_pubkey);
+    if (ed25519_privkey) {
+        explicit_bzero(ed25519_privkey, ED25519_KEY_LEN);
+        free(ed25519_privkey);
+    }
 
     return NULL;
 }
@@ -2300,6 +2367,10 @@ static EVP_PKEY *pki_key_to_pkey(ssh_key key)
     case SSH_KEYTYPE_ECDSA_P521_CERT01:
     case SSH_KEYTYPE_SK_ECDSA:
     case SSH_KEYTYPE_SK_ECDSA_CERT01:
+    case SSH_KEYTYPE_ED25519:
+    case SSH_KEYTYPE_ED25519_CERT01:
+    case SSH_KEYTYPE_SK_ED25519:
+    case SSH_KEYTYPE_SK_ED25519_CERT01:
         if (key->key == NULL) {
             SSH_LOG(SSH_LOG_TRACE, "NULL key->key");
             goto error;
@@ -2310,37 +2381,6 @@ static EVP_PKEY *pki_key_to_pkey(ssh_key key)
             return NULL;
         }
         pkey = key->key;
-        break;
-    case SSH_KEYTYPE_ED25519:
-    case SSH_KEYTYPE_ED25519_CERT01:
-    case SSH_KEYTYPE_SK_ED25519:
-    case SSH_KEYTYPE_SK_ED25519_CERT01:
-        if (ssh_key_is_private(key)) {
-            if (key->ed25519_privkey == NULL) {
-                SSH_LOG(SSH_LOG_TRACE, "NULL key->ed25519_privkey");
-                goto error;
-            }
-            /* In OpenSSL, the input is the private key seed only, which means
-             * the first half of the SSH private key (the second half is the
-             * public key). Both keys have the same length (32 bytes) */
-            pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL,
-                    (const uint8_t *)key->ed25519_privkey,
-                    ED25519_KEY_LEN);
-        } else {
-            if (key->ed25519_pubkey == NULL) {
-                SSH_LOG(SSH_LOG_TRACE, "NULL key->ed25519_pubkey");
-                goto error;
-            }
-            pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519, NULL,
-                    (const uint8_t *)key->ed25519_pubkey,
-                    ED25519_KEY_LEN);
-        }
-        if (pkey == NULL) {
-            SSH_LOG(SSH_LOG_TRACE,
-                    "Failed to create ed25519 EVP_PKEY: %s",
-                    ERR_error_string(ERR_get_error(), NULL));
-            return NULL;
-        }
         break;
     case SSH_KEYTYPE_UNKNOWN:
     default:
@@ -2628,8 +2668,6 @@ int pki_key_generate_ed25519(ssh_key key)
     int evp_rc;
     EVP_PKEY_CTX *pctx = NULL;
     EVP_PKEY *pkey = NULL;
-    size_t privkey_len = ED25519_KEY_LEN;
-    size_t pubkey_len = ED25519_KEY_LEN;
 
     if (key == NULL) {
         return SSH_ERROR;
@@ -2658,41 +2696,9 @@ int pki_key_generate_ed25519(ssh_key key)
                 ERR_error_string(ERR_get_error(), NULL));
         goto error;
     }
-
-    key->ed25519_privkey = malloc(ED25519_KEY_LEN);
-    if (key->ed25519_privkey == NULL) {
-        SSH_LOG(SSH_LOG_TRACE,
-                "Failed to allocate memory for ed25519 private key");
-        goto error;
-    }
-
-    key->ed25519_pubkey = malloc(ED25519_KEY_LEN);
-    if (key->ed25519_pubkey == NULL) {
-        SSH_LOG(SSH_LOG_TRACE,
-                "Failed to allocate memory for ed25519 public key");
-        goto error;
-    }
-
-    evp_rc = EVP_PKEY_get_raw_private_key(pkey, (uint8_t *)key->ed25519_privkey,
-                                          &privkey_len);
-    if (evp_rc != 1) {
-        SSH_LOG(SSH_LOG_TRACE,
-                "Failed to get ed25519 raw private key: %s",
-                ERR_error_string(ERR_get_error(), NULL));
-        goto error;
-    }
-
-    evp_rc = EVP_PKEY_get_raw_public_key(pkey, (uint8_t *)key->ed25519_pubkey,
-                                         &pubkey_len);
-    if (evp_rc != 1) {
-        SSH_LOG(SSH_LOG_TRACE,
-                "Failed to get ed25519 raw public key: %s",
-                ERR_error_string(ERR_get_error(), NULL));
-        goto error;
-    }
+    key->key = pkey;
 
     EVP_PKEY_CTX_free(pctx);
-    EVP_PKEY_free(pkey);
     return SSH_OK;
 
 error:
@@ -2702,8 +2708,6 @@ error:
     if (pkey != NULL) {
         EVP_PKEY_free(pkey);
     }
-    SAFE_FREE(key->ed25519_privkey);
-    SAFE_FREE(key->ed25519_pubkey);
 
     return SSH_ERROR;
 }
@@ -2872,6 +2876,9 @@ int pki_uri_import(const char *uri_name,
 
         break;
 #endif
+    case EVP_PKEY_ED25519:
+        type = SSH_KEYTYPE_ED25519;
+        break;
     default:
         SSH_LOG(SSH_LOG_TRACE, "Unknown or invalid public key type %d",
                 EVP_PKEY_base_id(pkey));
