@@ -703,12 +703,112 @@ ssh_key pki_key_dup(const ssh_key key, int demote)
 #endif /* OPENSSL_VERSION_NUMBER */
         break;
 #endif /* HAVE_OPENSSL_ECC */
-    case SSH_KEYTYPE_ED25519:
+    case SSH_KEYTYPE_ED25519: {
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+        /* Take the PKCS#11 keys as they are */
+        if (key->flags & SSH_KEY_FLAG_PKCS11_URI && !demote) {
+            rc = EVP_PKEY_up_ref(key->key);
+            if (rc != 1) {
+                goto fail;
+            }
+            new->key = key->key;
+            return new;
+        }
+
+        if (!demote && (key->flags & SSH_KEY_FLAG_PRIVATE)) {
+            unsigned char *ed25519_privkey = NULL;
+            size_t key_len = 0;
+
+            rc = EVP_PKEY_get_raw_private_key(key->key, NULL, &key_len);
+            if (rc != 1) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Failed to get ed25519 raw private key length: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                goto fail;
+            }
+
+            if (key_len != ED25519_KEY_LEN) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Unexpected length of private key %zu. Expected %d.",
+                        key_len,
+                        ED25519_KEY_LEN);
+                goto fail;
+            }
+
+            ed25519_privkey = malloc(key_len);
+            if (ed25519_privkey == NULL) {
+                SSH_LOG(SSH_LOG_TRACE, "Out of memory");
+                goto fail;
+            }
+
+            rc = EVP_PKEY_get_raw_private_key(key->key,
+                                              ed25519_privkey,
+                                              &key_len);
+            if (rc != 1) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Failed to get ed25519 raw private key: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                free(ed25519_privkey);
+                goto fail;
+            }
+
+            new->key = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519,
+                                                    NULL,
+                                                    ed25519_privkey,
+                                                    key_len);
+            free(ed25519_privkey);
+        } else {
+            unsigned char *ed25519_pubkey = NULL;
+            size_t key_len = 0;
+
+            rc = EVP_PKEY_get_raw_public_key(key->key, NULL, &key_len);
+            if (rc != 1) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Failed to get ed25519 raw public key length: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                goto fail;
+            }
+
+            if (key_len != ED25519_KEY_LEN) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Unexpected length of public key %zu. Expected %d.",
+                        key_len,
+                        ED25519_KEY_LEN);
+                goto fail;
+            }
+
+            ed25519_pubkey = malloc(key_len);
+            if (ed25519_pubkey == NULL) {
+                SSH_LOG(SSH_LOG_TRACE, "Out of memory");
+                goto fail;
+            }
+
+            rc = EVP_PKEY_get_raw_public_key(key->key,
+                                             ed25519_pubkey,
+                                             &key_len);
+            if (rc != 1) {
+                SSH_LOG(SSH_LOG_TRACE,
+                        "Failed to get ed25519 raw public key: %s",
+                        ERR_error_string(ERR_get_error(), NULL));
+                free(ed25519_pubkey);
+                goto fail;
+            }
+
+            new->key = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519,
+                                                   NULL,
+                                                   ed25519_pubkey,
+                                                   key_len);
+            free(ed25519_pubkey);
+        }
+
+#else
         rc = evp_dup_ed25519_pkey(key, new, demote);
         if (rc != SSH_OK) {
             goto fail;
         }
+#endif /* OPENSSL_VERSION_NUMBER < 0x30000000L */
         break;
+    }
     case SSH_KEYTYPE_UNKNOWN:
     default:
         ssh_key_free(new);
