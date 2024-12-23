@@ -364,11 +364,11 @@ static void torture_pki_ed25519_publickey_base64(void **state)
     }
 
     rc = ssh_pki_import_pubkey_base64(q, type, &key);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(key);
 
     rc = ssh_pki_export_pubkey_base64(key, &b64_key);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(b64_key);
 
     assert_string_equal(q, b64_key);
@@ -386,7 +386,7 @@ static void torture_pki_ed25519_generate_pubkey_from_privkey(void **state)
     int rc;
     int len;
 
-    (void) state; /* unused */
+    (void)state; /* unused */
 
     /* remove the public key, generate it from the private key and write it. */
     unlink(LIBSSH_ED25519_TESTKEY ".pub");
@@ -403,12 +403,12 @@ static void torture_pki_ed25519_generate_pubkey_from_privkey(void **state)
     assert_non_null(pubkey);
 
     rc = ssh_pki_export_pubkey_file(pubkey, LIBSSH_ED25519_TESTKEY ".pub");
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
 
     rc = torture_read_one_line(LIBSSH_ED25519_TESTKEY ".pub",
                                pubkey_generated,
                                sizeof(pubkey_generated));
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
 
     len = torture_pubkey_len(torture_get_testkey_pub(SSH_KEYTYPE_ED25519));
     assert_memory_equal(torture_get_testkey_pub(SSH_KEYTYPE_ED25519),
@@ -490,17 +490,17 @@ static void torture_pki_ed25519_cert_verify(void **state)
                                      NULL,
                                      NULL,
                                      &privkey);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(privkey);
 
     rc = ssh_pki_import_cert_file(LIBSSH_ED25519_TESTKEY "-cert.pub", &cert);
-    assert_true(rc == 0);
+    assert_return_code(rc, errno);
     assert_non_null(cert);
 
     sign = pki_do_sign(privkey, HASH, 20, SSH_DIGEST_AUTO);
     assert_non_null(sign);
     rc = ssh_pki_signature_verify(session, sign, cert, HASH, 20);
-    assert_true(rc == SSH_OK);
+    assert_return_code(rc, errno);
     ssh_signature_free(sign);
     SSH_KEY_FREE(privkey);
     SSH_KEY_FREE(cert);
@@ -528,7 +528,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                      NULL,
                                      NULL,
                                      &origkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(origkey);
 
     unlink(LIBSSH_ED25519_TESTKEY);
@@ -539,18 +539,18 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                             NULL,
                                             LIBSSH_ED25519_TESTKEY,
                                             format);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     rc = ssh_pki_import_privkey_file(LIBSSH_ED25519_TESTKEY,
                                      NULL,
                                      NULL,
                                      NULL,
                                      &privkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(privkey);
 
     rc = ssh_key_cmp(origkey, privkey, SSH_KEY_CMP_PRIVATE);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     unlink(LIBSSH_ED25519_TESTKEY);
     SSH_KEY_FREE(privkey);
@@ -561,7 +561,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                             NULL,
                                             LIBSSH_ED25519_TESTKEY,
                                             format);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     /* Opening passphrase protected key will prompt for the pin interactively,
      * which would hang in the test */
@@ -580,11 +580,11 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                      NULL,
                                      NULL,
                                      &privkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(privkey);
 
     rc = ssh_key_cmp(origkey, privkey, SSH_KEY_CMP_PRIVATE);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     unlink(LIBSSH_ED25519_TESTKEY);
 
     SSH_KEY_FREE(origkey);
@@ -596,7 +596,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                      NULL,
                                      NULL,
                                      &origkey);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
     assert_non_null(origkey);
 
     unlink(LIBSSH_ED25519_TESTKEY_PASSPHRASE);
@@ -606,7 +606,7 @@ torture_pki_ed25519_write_privkey_format(void **state,
                                             NULL,
                                             LIBSSH_ED25519_TESTKEY_PASSPHRASE,
                                             format);
-    assert_int_equal(rc, 0);
+    assert_return_code(rc, errno);
 
     /* Test with invalid passphrase */
     rc = ssh_pki_import_privkey_file(LIBSSH_ED25519_TESTKEY_PASSPHRASE,
@@ -832,7 +832,7 @@ static void torture_pki_ed25519_verify(void **state){
         *ptr = '\0';
     }
     rc = ssh_pki_import_pubkey_base64(pkey_ptr, SSH_KEYTYPE_ED25519, &pubkey);
-    assert_true(rc == SSH_OK);
+    assert_return_code(rc, errno);
     assert_non_null(pubkey);
 
     rc = ssh_string_fill(blob, ref_signature, ED25519_SIG_LEN);
@@ -841,7 +841,7 @@ static void torture_pki_ed25519_verify(void **state){
     assert_non_null(sig);
 
     rc = ssh_pki_signature_verify(session, sig, pubkey, HASH, sizeof(HASH));
-    assert_true(rc == SSH_OK);
+    assert_return_code(rc, errno);
 
     /* Alter signature and expect verification error */
 #ifdef HAVE_LIBCRYPTO
