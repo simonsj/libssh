@@ -1606,16 +1606,12 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
 
                 ssh_string_burn(d);
                 SSH_STRING_FREE(d);
-                d = NULL;
                 ssh_string_burn(iqmp);
                 SSH_STRING_FREE(iqmp);
-                iqmp = NULL;
                 ssh_string_burn(p);
                 SSH_STRING_FREE(p);
-                p = NULL;
                 ssh_string_burn(q);
                 SSH_STRING_FREE(q);
-                q = NULL;
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
                 bignum_safe_free(bd);
                 bignum_safe_free(biqmp);
@@ -1625,10 +1621,8 @@ ssh_string pki_key_to_blob(const ssh_key key, enum ssh_key_e type)
             }
             ssh_string_burn(e);
             SSH_STRING_FREE(e);
-            e = NULL;
             ssh_string_burn(n);
             SSH_STRING_FREE(n);
-            n = NULL;
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
             bignum_safe_free(bn);
             bignum_safe_free(be);
