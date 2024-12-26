@@ -1340,6 +1340,12 @@ int pki_import_privkey_buffer(enum ssh_keytypes_e type,
             {
                 ssh_string pubkey = NULL, privkey = NULL;
 
+                if (ssh_fips_mode()) {
+                    SSH_LOG(SSH_LOG_TRACE,
+                            "Ed25519 keys not supported in FIPS mode");
+                    goto fail;
+                }
+
                 rc = ssh_buffer_unpack(buffer, "SS", &pubkey, &privkey);
                 if (rc != SSH_OK){
                     SSH_LOG(SSH_LOG_TRACE, "Unpack error");
