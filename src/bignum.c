@@ -27,40 +27,39 @@
 #include "libssh/bignum.h"
 #include "libssh/string.h"
 
-ssh_string ssh_make_bignum_string(bignum num) {
-  ssh_string ptr = NULL;
-  size_t pad = 0;
-  size_t len = bignum_num_bytes(num);
-  size_t bits = bignum_num_bits(num);
+ssh_string ssh_make_bignum_string(bignum num)
+{
+    ssh_string ptr = NULL;
+    size_t pad = 0;
+    size_t len = bignum_num_bytes(num);
+    size_t bits = bignum_num_bits(num);
 
-  if (len == 0) {
-      return NULL;
-  }
+    if (len == 0) {
+        return NULL;
+    }
 
-  /* If the first bit is set we have a negative number */
-  if (!(bits % 8) && bignum_is_bit_set(num, bits - 1)) {
-    pad++;
-  }
+    /* If the first bit is set we have a negative number */
+    if (!(bits % 8) && bignum_is_bit_set(num, bits - 1)) {
+        pad++;
+    }
 
 #ifdef DEBUG_CRYPTO
-  SSH_LOG(SSH_LOG_TRACE,
-          "%zu bits, %zu bytes, %zu padding",
-          bits, len, pad);
+    SSH_LOG(SSH_LOG_TRACE, "%zu bits, %zu bytes, %zu padding", bits, len, pad);
 #endif /* DEBUG_CRYPTO */
 
-  ptr = ssh_string_new(len + pad);
-  if (ptr == NULL) {
-    return NULL;
-  }
+    ptr = ssh_string_new(len + pad);
+    if (ptr == NULL) {
+        return NULL;
+    }
 
-  /* We have a negative number so we need a leading zero */
-  if (pad) {
-    ptr->data[0] = 0;
-  }
+    /* We have a negative number so we need a leading zero */
+    if (pad) {
+        ptr->data[0] = 0;
+    }
 
-  bignum_bn2bin(num, len, ptr->data + pad);
+    bignum_bn2bin(num, len, ptr->data + pad);
 
-  return ptr;
+    return ptr;
 }
 
 bignum ssh_make_string_bn(ssh_string string)
@@ -71,7 +70,8 @@ bignum ssh_make_string_bn(ssh_string string)
 #ifdef DEBUG_CRYPTO
     SSH_LOG(SSH_LOG_TRACE,
             "Importing a %zu bits, %zu bytes object ...",
-            len * 8, len);
+            len * 8,
+            len);
 #endif /* DEBUG_CRYPTO */
 
     bignum_bin2bn(string->data, (int)len, &bn);
@@ -86,7 +86,9 @@ void ssh_print_bignum(const char *name, const_bignum num)
     if (num != NULL) {
         bignum_bn2hex(num, &hex);
     }
-    SSH_LOG(SSH_LOG_DEBUG, "%s value: %s", name,
+    SSH_LOG(SSH_LOG_DEBUG,
+            "%s value: %s",
+            name,
             (hex == NULL) ? "(null)" : (char *)hex);
     ssh_crypto_free(hex);
 }
