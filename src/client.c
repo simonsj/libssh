@@ -254,45 +254,47 @@ end:
  */
 int dh_handshake(ssh_session session)
 {
-  int rc = SSH_AGAIN;
+    int rc = SSH_AGAIN;
 
-  SSH_LOG(SSH_LOG_TRACE, "dh_handshake_state = %d, kex_type = %d",
-          session->dh_handshake_state,  session->next_crypto->kex_type);
+    SSH_LOG(SSH_LOG_TRACE,
+            "dh_handshake_state = %d, kex_type = %d",
+            session->dh_handshake_state,
+            session->next_crypto->kex_type);
 
-  switch (session->dh_handshake_state) {
+    switch (session->dh_handshake_state) {
     case DH_STATE_INIT:
-      switch(session->next_crypto->kex_type){
+        switch (session->next_crypto->kex_type) {
         case SSH_KEX_DH_GROUP1_SHA1:
         case SSH_KEX_DH_GROUP14_SHA1:
         case SSH_KEX_DH_GROUP14_SHA256:
         case SSH_KEX_DH_GROUP16_SHA512:
         case SSH_KEX_DH_GROUP18_SHA512:
-          rc = ssh_client_dh_init(session);
-          break;
+            rc = ssh_client_dh_init(session);
+            break;
 #ifdef WITH_GEX
         case SSH_KEX_DH_GEX_SHA1:
         case SSH_KEX_DH_GEX_SHA256:
-          rc = ssh_client_dhgex_init(session);
-          break;
+            rc = ssh_client_dhgex_init(session);
+            break;
 #endif /* WITH_GEX */
 #ifdef HAVE_ECDH
         case SSH_KEX_ECDH_SHA2_NISTP256:
         case SSH_KEX_ECDH_SHA2_NISTP384:
         case SSH_KEX_ECDH_SHA2_NISTP521:
-          rc = ssh_client_ecdh_init(session);
-          break;
+            rc = ssh_client_ecdh_init(session);
+            break;
 #endif
 #ifdef HAVE_CURVE25519
         case SSH_KEX_CURVE25519_SHA256:
         case SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG:
-          rc = ssh_client_curve25519_init(session);
-          break;
+            rc = ssh_client_curve25519_init(session);
+            break;
 #endif
         default:
-          rc = SSH_ERROR;
-      }
+            rc = SSH_ERROR;
+        }
 
-      break;
+        break;
     case DH_STATE_INIT_SENT:
     	/* wait until ssh_packet_dh_reply is called */
     	break;
@@ -300,15 +302,17 @@ int dh_handshake(ssh_session session)
     	/* wait until ssh_packet_newkeys is called */
     	break;
     case DH_STATE_FINISHED:
-      return SSH_OK;
+        return SSH_OK;
     default:
-      ssh_set_error(session, SSH_FATAL, "Invalid state in dh_handshake(): %d",
-          session->dh_handshake_state);
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Invalid state in dh_handshake(): %d",
+                      session->dh_handshake_state);
 
-      return SSH_ERROR;
-  }
+        return SSH_ERROR;
+    }
 
-  return rc;
+    return rc;
 }
 
 static int ssh_service_request_termination(void *s)
