@@ -56,32 +56,32 @@
 #define AES_GCM_IVLEN  12
 
 enum ssh_key_exchange_e {
-  /* diffie-hellman-group1-sha1 */
-  SSH_KEX_DH_GROUP1_SHA1=1,
-  /* diffie-hellman-group14-sha1 */
-  SSH_KEX_DH_GROUP14_SHA1,
+    /* diffie-hellman-group1-sha1 */
+    SSH_KEX_DH_GROUP1_SHA1 = 1,
+    /* diffie-hellman-group14-sha1 */
+    SSH_KEX_DH_GROUP14_SHA1,
 #ifdef WITH_GEX
-  /* diffie-hellman-group-exchange-sha1 */
-  SSH_KEX_DH_GEX_SHA1,
-  /* diffie-hellman-group-exchange-sha256 */
-  SSH_KEX_DH_GEX_SHA256,
+    /* diffie-hellman-group-exchange-sha1 */
+    SSH_KEX_DH_GEX_SHA1,
+    /* diffie-hellman-group-exchange-sha256 */
+    SSH_KEX_DH_GEX_SHA256,
 #endif /* WITH_GEX */
-  /* ecdh-sha2-nistp256 */
-  SSH_KEX_ECDH_SHA2_NISTP256,
-  /* ecdh-sha2-nistp384 */
-  SSH_KEX_ECDH_SHA2_NISTP384,
-  /* ecdh-sha2-nistp521 */
-  SSH_KEX_ECDH_SHA2_NISTP521,
-  /* curve25519-sha256@libssh.org */
-  SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG,
-  /* curve25519-sha256 */
-  SSH_KEX_CURVE25519_SHA256,
-  /* diffie-hellman-group16-sha512 */
-  SSH_KEX_DH_GROUP16_SHA512,
-  /* diffie-hellman-group18-sha512 */
-  SSH_KEX_DH_GROUP18_SHA512,
-  /* diffie-hellman-group14-sha256 */
-  SSH_KEX_DH_GROUP14_SHA256,
+    /* ecdh-sha2-nistp256 */
+    SSH_KEX_ECDH_SHA2_NISTP256,
+    /* ecdh-sha2-nistp384 */
+    SSH_KEX_ECDH_SHA2_NISTP384,
+    /* ecdh-sha2-nistp521 */
+    SSH_KEX_ECDH_SHA2_NISTP521,
+    /* curve25519-sha256@libssh.org */
+    SSH_KEX_CURVE25519_SHA256_LIBSSH_ORG,
+    /* curve25519-sha256 */
+    SSH_KEX_CURVE25519_SHA256,
+    /* diffie-hellman-group16-sha512 */
+    SSH_KEX_DH_GROUP16_SHA512,
+    /* diffie-hellman-group18-sha512 */
+    SSH_KEX_DH_GROUP18_SHA512,
+    /* diffie-hellman-group14-sha256 */
+    SSH_KEX_DH_GROUP14_SHA256,
 };
 
 enum ssh_cipher_e {
