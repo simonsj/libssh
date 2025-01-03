@@ -44,11 +44,13 @@ void crypto_hash_sha512(unsigned char *out,
     sha512(in, inlen, out);
 }
 
+#ifndef HAVE_LIBGCRYPT
 static void crypto_random(void *ctx, size_t length, uint8_t *dst)
 {
     int *err = ctx;
     *err = ssh_get_random(dst, length, 1);
 }
+#endif /* HAVE_LIBGCRYPT */
 
 static SSH_PACKET_CALLBACK(ssh_packet_client_sntrup761x25519_reply);
 
@@ -74,6 +76,21 @@ static int ssh_sntrup761x25519_init(ssh_session session)
     }
 
     if (!session->server) {
+#ifdef HAVE_LIBGCRYPT
+        gcry_error_t err;
+
+        err = gcry_kem_keypair(GCRY_KEM_SNTRUP761,
+                               session->next_crypto->sntrup761_client_pubkey,
+                               SNTRUP761_PUBLICKEY_SIZE,
+                               session->next_crypto->sntrup761_privkey,
+                               SNTRUP761_SECRETKEY_SIZE);
+        if (err) {
+            SSH_LOG(SSH_LOG_TRACE,
+                    "Failed to generate sntrup761 key: %s",
+                    gpg_strerror(err));
+            return SSH_ERROR;
+        }
+#else
         sntrup761_keypair(session->next_crypto->sntrup761_client_pubkey,
                           session->next_crypto->sntrup761_privkey,
                           &rc,
@@ -83,6 +100,7 @@ static int ssh_sntrup761x25519_init(ssh_session session)
                     "Failed to generate sntrup761 key: PRNG failure");
             return SSH_ERROR;
         }
+#endif /* HAVE_LIBGCRYPT */
     }
 
     return SSH_OK;
@@ -142,6 +160,43 @@ static int ssh_sntrup761x25519_build_k(ssh_session session)
     ssh_log_hexdump("Curve25519 shared secret", k, CURVE25519_PUBKEY_SIZE);
 #endif
 
+#ifdef HAVE_LIBGCRYPT
+    if (session->server) {
+        gcry_error_t err;
+        err = gcry_kem_encap(GCRY_KEM_SNTRUP761,
+                             session->next_crypto->sntrup761_client_pubkey,
+                             SNTRUP761_PUBLICKEY_SIZE,
+                             session->next_crypto->sntrup761_ciphertext,
+                             SNTRUP761_CIPHERTEXT_SIZE,
+                             ssk,
+                             SNTRUP761_SIZE,
+                             NULL,
+                             0);
+        if (err) {
+            SSH_LOG(SSH_LOG_TRACE,
+                    "Failed to encapsulate sntrup761 shared secret: %s",
+                    gpg_strerror(err));
+            return SSH_ERROR;
+        }
+    } else {
+        gcry_error_t err;
+        err = gcry_kem_decap(GCRY_KEM_SNTRUP761,
+                             session->next_crypto->sntrup761_privkey,
+                             SNTRUP761_SECRETKEY_SIZE,
+                             session->next_crypto->sntrup761_ciphertext,
+                             SNTRUP761_CIPHERTEXT_SIZE,
+                             ssk,
+                             SNTRUP761_SIZE,
+                             NULL,
+                             0);
+        if (err) {
+            SSH_LOG(SSH_LOG_TRACE,
+                    "Failed to decapsulate sntrup761 shared secret: %s",
+                    gpg_strerror(err));
+            return SSH_ERROR;
+        }
+    }
+#else
     if (session->server) {
         sntrup761_enc(session->next_crypto->sntrup761_ciphertext,
                       ssk,
@@ -156,6 +211,7 @@ static int ssh_sntrup761x25519_build_k(ssh_session session)
                       session->next_crypto->sntrup761_ciphertext,
                       session->next_crypto->sntrup761_privkey);
     }
+#endif /* HAVE_LIBGCRYPT */
 
 #ifdef DEBUG_CRYPTO
     ssh_log_hexdump("server cipher text",

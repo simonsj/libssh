@@ -120,7 +120,6 @@ set(libssh_SRCS
   wrapper.c
   external/bcrypt_pbkdf.c
   external/blowfish.c
-  external/sntrup761.c
   config_parser.c
   token.c
   pki_ed25519_common.c
@@ -192,6 +191,7 @@ elseif (WITH_MBEDTLS)
         external/fe25519.c
         external/ge25519.c
         external/sc25519.c
+        external/sntrup761.c
        )
     if (NOT (HAVE_MBEDTLS_CHACHA20_H AND HAVE_MBEDTLS_POLY1305_H))
         set(libssh_SRCS
@@ -212,6 +212,7 @@ else (WITH_GCRYPT)
         md_crypto.c
         libcrypto.c
         dh_crypto.c
+        external/sntrup761.c
        )
     if (NOT HAVE_OPENSSL_EVP_CHACHA20)
         set(libssh_SRCS
