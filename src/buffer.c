@@ -828,6 +828,7 @@ static int ssh_buffer_pack_allocate_va(struct ssh_buffer_struct *buffer,
     const char *p = NULL;
     ssh_string string = NULL;
     char *cstring = NULL;
+    bignum b = NULL;
     size_t needed_size = 0;
     size_t len;
     size_t count;
@@ -874,17 +875,15 @@ static int ssh_buffer_pack_allocate_va(struct ssh_buffer_struct *buffer,
             break;
         case 'F':
         case 'B':
-            va_arg(ap, bignum);
-            /*
-             * Use a fixed size for a bignum
-             * (they should normally be around 32)
-             */
+            b = va_arg(ap, bignum);
             if (*p == 'F') {
+                /* For padded bignum, we know the exact length */
                 len = va_arg(ap, size_t);
                 count++; /* increase argument count */
                 needed_size += sizeof(uint32_t) + len;
             } else {
-                needed_size += 64;
+                /* The bignum bytes + 1 for possible padding */
+                needed_size += sizeof(uint32_t) + bignum_num_bytes(b) + 1;
             }
             break;
         case 't':
