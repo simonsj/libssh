@@ -30,9 +30,10 @@
 #include <pwd.h>
 
 #include "chacha20_override.h"
-#include "poly1305_override.h"
 #include "curve25519_override.h"
 #include "ed25519_override.h"
+#include "poly1305_override.h"
+#include "sntrup761_override.h"
 
 const char template[] = "temp_dir_XXXXXX";
 
@@ -261,6 +262,7 @@ torture_override_ecdh_sntrup761x25519_sha512_openssh_com(void **state)
 {
     struct torture_state *s = *state;
     bool internal_curve25519_called;
+    bool internal_sntrup761_called;
 
     if (ssh_fips_mode()) {
         skip();
@@ -272,11 +274,13 @@ torture_override_ecdh_sntrup761x25519_sha512_openssh_com(void **state)
                    NULL  /* hostkey */);
 
     internal_curve25519_called = internal_curve25519_function_called();
+    internal_sntrup761_called = internal_sntrup761_function_called();
 
-    /* TODO: when non-internal sntrup761 is supported, this is a good
-       place to add override checks of the sntrup761-related functions
-       too. Currently none of our external crypto libraries supports
-       sntrup761. */
+#if SHOULD_CALL_INTERNAL_SNTRUP761
+    assert_true(internal_sntrup761_called);
+#else
+    assert_false(internal_sntrup761_called);
+#endif
 
 #if SHOULD_CALL_INTERNAL_CURVE25519
     assert_true(internal_curve25519_called);

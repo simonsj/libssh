@@ -60,6 +60,10 @@ if (CLIENT_TESTING)
     list(APPEND WRAP_SYMBOLS
          "-Wl,--wrap=crypto_scalarmult_base"
          "-Wl,--wrap=crypto_scalarmult")
+    list(APPEND WRAP_SYMBOLS
+         "-Wl,--wrap=sntrup761_keypair"
+         "-Wl,--wrap=sntrup761_enc"
+         "-Wl,--wrap=sntrup761_dec")
 
     add_library(${TORTURE_SHARED_LIBRARY}
                 SHARED
