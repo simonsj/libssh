@@ -418,6 +418,9 @@ static sftp_attributes sftp_parse_attr_4(sftp_session sftp,
                    (attr->extended_type = ssh_buffer_get_ssh_string(buf)) &&
                    (attr->extended_data = ssh_buffer_get_ssh_string(buf))) {
                 attr->extended_count--;
+                /* just ignore the extensions -- we can't interpret them */
+                SSH_STRING_FREE(attr->extended_type);
+                SSH_STRING_FREE(attr->extended_data);
             }
 
             if (attr->extended_count) {
