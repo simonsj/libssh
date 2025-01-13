@@ -1131,365 +1131,390 @@ void sftp_file_set_blocking(sftp_file handle)
 }
 
 /* Read from a file using an opened sftp file handle. */
-ssize_t sftp_read(sftp_file handle, void *buf, size_t count) {
-  sftp_session sftp;
-  sftp_message msg = NULL;
-  sftp_status_message status;
-  ssh_string datastring;
-  size_t datalen;
-  ssh_buffer buffer;
-  uint32_t id;
-  int rc;
+ssize_t
+sftp_read(sftp_file handle, void *buf, size_t count)
+{
+    sftp_session sftp = NULL;
+    sftp_message msg = NULL;
+    sftp_status_message status;
+    ssh_string datastring = NULL;
+    size_t datalen;
+    ssh_buffer buffer = NULL;
+    uint32_t id;
+    int rc;
 
-  if (handle == NULL) {
-      return -1;
-  }
-  sftp = handle->sftp;
+    if (handle == NULL) {
+        return -1;
+    }
+    sftp = handle->sftp;
 
-  if (handle->eof) {
-    return 0;
-  }
+    if (handle->eof) {
+        return 0;
+    }
 
-  /*
-   * limit the reads to the maximum specified in Section 3 of
-   * https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-02
-   * or to the values provided by the limits@openssh.com extension.
-   *
-   * TODO: We should iterate over the blocks rather than writing less than
-   * requested to provide less surprises to the calling applications.
-   */
-  if (count > sftp->limits->max_read_length) {
-      if (sftp->limits->max_read_length > SIZE_MAX) {
-          return SSH_ERROR;
-      }
-      count = (size_t)sftp->limits->max_read_length;
-  }
+    /*
+     * limit the reads to the maximum specified in Section 3 of
+     * https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-02
+     * or to the values provided by the limits@openssh.com extension.
+     *
+     * TODO: We should iterate over the blocks rather than writing less than
+     * requested to provide less surprises to the calling applications.
+     */
+    if (count > sftp->limits->max_read_length) {
+        if (sftp->limits->max_read_length > SIZE_MAX) {
+            return SSH_ERROR;
+        }
+        count = (size_t)sftp->limits->max_read_length;
+    }
 
-  buffer = ssh_buffer_new();
-  if (buffer == NULL) {
-    ssh_set_error_oom(sftp->session);
-    return -1;
-  }
+    buffer = ssh_buffer_new();
+    if (buffer == NULL) {
+        ssh_set_error_oom(sftp->session);
+        return -1;
+    }
 
-  id = sftp_get_new_id(handle->sftp);
+    id = sftp_get_new_id(handle->sftp);
 
-  rc = ssh_buffer_pack(buffer,
-                       "dSqd",
-                       id,
-                       handle->handle,
-                       handle->offset,
-                       count);
-  if (rc != SSH_OK){
-    ssh_set_error_oom(sftp->session);
+    rc = ssh_buffer_pack(buffer,
+                         "dSqd",
+                         id,
+                         handle->handle,
+                         handle->offset,
+                         count);
+    if (rc != SSH_OK) {
+        ssh_set_error_oom(sftp->session);
+        SSH_BUFFER_FREE(buffer);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+    if (sftp_packet_write(handle->sftp, SSH_FXP_READ, buffer) < 0) {
+        SSH_BUFFER_FREE(buffer);
+        return -1;
+    }
     SSH_BUFFER_FREE(buffer);
-    sftp_set_error(sftp, SSH_FX_FAILURE);
-    return -1;
-  }
-  if (sftp_packet_write(handle->sftp, SSH_FXP_READ, buffer) < 0) {
-    SSH_BUFFER_FREE(buffer);
-    return -1;
-  }
-  SSH_BUFFER_FREE(buffer);
 
-  rc = sftp_recv_response_msg(handle->sftp, id, !handle->nonblocking, &msg);
-  if (rc == SSH_ERROR) {
-      return -1;
-  }
+    rc = sftp_recv_response_msg(handle->sftp, id, !handle->nonblocking, &msg);
+    if (rc == SSH_ERROR) {
+        return -1;
+    }
 
-  if (rc == SSH_AGAIN) {
-      /*
-       * file opened in non blocking mode and the response has not arrived yet.
-       * Since we cannot block, return 0 as the number of bytes read.
-       */
-      return 0;
-  }
+    if (rc == SSH_AGAIN) {
+        /*
+         * file opened in non blocking mode and the response has not arrived
+         * yet. Since we cannot block, return 0 as the number of bytes read.
+         */
+        return 0;
+    }
 
-  switch (msg->packet_type) {
+    switch (msg->packet_type) {
     case SSH_FXP_STATUS:
-      status = parse_status_msg(msg);
-      sftp_message_free(msg);
-      if (status == NULL) {
-        return -1;
-      }
-      sftp_set_error(sftp, status->status);
-      switch (status->status) {
+        status = parse_status_msg(msg);
+        sftp_message_free(msg);
+        if (status == NULL) {
+            return -1;
+        }
+        sftp_set_error(sftp, status->status);
+        switch (status->status) {
         case SSH_FX_EOF:
-          handle->eof = 1;
-          status_msg_free(status);
-          return 0;
+            handle->eof = 1;
+            status_msg_free(status);
+            return 0;
         default:
-          break;
-      }
-      ssh_set_error(sftp->session,SSH_REQUEST_DENIED,
-          "SFTP server: %s", status->errormsg);
-      status_msg_free(status);
-      return -1;
+            break;
+        }
+        ssh_set_error(sftp->session,
+                      SSH_REQUEST_DENIED,
+                      "SFTP server: %s",
+                      status->errormsg);
+        status_msg_free(status);
+        return -1;
     case SSH_FXP_DATA:
-      datastring = ssh_buffer_get_ssh_string(msg->payload);
-      sftp_message_free(msg);
-      if (datastring == NULL) {
-        ssh_set_error(sftp->session, SSH_FATAL,
-            "Received invalid DATA packet from sftp server");
-        return -1;
-      }
+        datastring = ssh_buffer_get_ssh_string(msg->payload);
+        sftp_message_free(msg);
+        if (datastring == NULL) {
+            ssh_set_error(sftp->session,
+                          SSH_FATAL,
+                          "Received invalid DATA packet from sftp server");
+            return -1;
+        }
 
-      datalen = ssh_string_len(datastring);
-      if (datalen > count) {
-        ssh_set_error(sftp->session, SSH_FATAL,
-            "Received a too big DATA packet from sftp server: "
-            "%zu and asked for %zu",
-            datalen, count);
+        datalen = ssh_string_len(datastring);
+        if (datalen > count) {
+            ssh_set_error(sftp->session,
+                          SSH_FATAL,
+                          "Received a too big DATA packet from sftp server: "
+                          "%zu and asked for %zu",
+                          datalen,
+                          count);
+            SSH_STRING_FREE(datastring);
+            return -1;
+        }
+        handle->offset += (uint64_t)datalen;
+        memcpy(buf, ssh_string_data(datastring), datalen);
         SSH_STRING_FREE(datastring);
-        return -1;
-      }
-      handle->offset += (uint64_t)datalen;
-      memcpy(buf, ssh_string_data(datastring), datalen);
-      SSH_STRING_FREE(datastring);
-      return datalen;
+        return datalen;
     default:
-      ssh_set_error(sftp->session, SSH_FATAL,
-          "Received message %d during read!", msg->packet_type);
-      sftp_message_free(msg);
-      sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
-      return -1;
-  }
+        ssh_set_error(sftp->session,
+                      SSH_FATAL,
+                      "Received message %d during read!",
+                      msg->packet_type);
+        sftp_message_free(msg);
+        sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
+        return -1;
+    }
 
-  return -1; /* not reached */
+    return -1; /* not reached */
 }
 
 /* Start an asynchronous read from a file using an opened sftp file handle. */
-int sftp_async_read_begin(sftp_file file, uint32_t len){
-  sftp_session sftp = file->sftp;
-  ssh_buffer buffer;
-  uint32_t id;
-  int rc;
+int
+sftp_async_read_begin(sftp_file file, uint32_t len)
+{
+    sftp_session sftp = file->sftp;
+    ssh_buffer buffer = NULL;
+    uint32_t id;
+    int rc;
 
-  buffer = ssh_buffer_new();
-  if (buffer == NULL) {
-    ssh_set_error_oom(sftp->session);
-    sftp_set_error(sftp, SSH_FX_FAILURE);
-    return -1;
-  }
+    buffer = ssh_buffer_new();
+    if (buffer == NULL) {
+        ssh_set_error_oom(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
 
-  id = sftp_get_new_id(sftp);
+    id = sftp_get_new_id(sftp);
 
-  rc = ssh_buffer_pack(buffer,
-                       "dSqd",
-                       id,
-                       file->handle,
-                       file->offset,
-                       len);
-  if (rc != SSH_OK) {
-    ssh_set_error_oom(sftp->session);
+    rc = ssh_buffer_pack(buffer, "dSqd", id, file->handle, file->offset, len);
+    if (rc != SSH_OK) {
+        ssh_set_error_oom(sftp->session);
+        SSH_BUFFER_FREE(buffer);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+    if (sftp_packet_write(sftp, SSH_FXP_READ, buffer) < 0) {
+        SSH_BUFFER_FREE(buffer);
+        return -1;
+    }
     SSH_BUFFER_FREE(buffer);
-    sftp_set_error(sftp, SSH_FX_FAILURE);
-    return -1;
-  }
-  if (sftp_packet_write(sftp, SSH_FXP_READ, buffer) < 0) {
-    SSH_BUFFER_FREE(buffer);
-    return -1;
-  }
-  SSH_BUFFER_FREE(buffer);
 
-  file->offset += len; /* assume we'll read len bytes */
+    file->offset += len; /* assume we'll read len bytes */
 
-  return id;
+    return id;
 }
 
 /* Wait for an asynchronous read to complete and save the data. */
-int sftp_async_read(sftp_file file, void *data, uint32_t size, uint32_t id){
-  sftp_session sftp;
-  sftp_message msg = NULL;
-  sftp_status_message status;
-  ssh_string datastring;
-  int rc, err = SSH_OK;
-  size_t len;
+int
+sftp_async_read(sftp_file file, void *data, uint32_t size, uint32_t id)
+{
+    sftp_session sftp = NULL;
+    sftp_message msg = NULL;
+    sftp_status_message status;
+    ssh_string datastring = NULL;
+    int rc, err = SSH_OK;
+    size_t len;
 
-  if (file == NULL) {
-    return SSH_ERROR;
-  }
-  sftp = file->sftp;
+    if (file == NULL) {
+        return SSH_ERROR;
+    }
+    sftp = file->sftp;
 
-  if (file->eof) {
-    return 0;
-  }
+    if (file->eof) {
+        return 0;
+    }
 
-  /* handle an existing request */
-  rc = sftp_recv_response_msg(sftp, id, !file->nonblocking, &msg);
-  if (rc == SSH_ERROR || rc == SSH_AGAIN) {
-      return rc;
-  }
+    /* handle an existing request */
+    rc = sftp_recv_response_msg(sftp, id, !file->nonblocking, &msg);
+    if (rc == SSH_ERROR || rc == SSH_AGAIN) {
+        return rc;
+    }
 
-  switch (msg->packet_type) {
+    switch (msg->packet_type) {
     case SSH_FXP_STATUS:
-      status = parse_status_msg(msg);
-      sftp_message_free(msg);
-      if (status == NULL) {
-        return -1;
-      }
-      sftp_set_error(sftp, status->status);
-      if (status->status != SSH_FX_EOF) {
-        ssh_set_error(sftp->session, SSH_REQUEST_DENIED,
-            "SFTP server : %s", status->errormsg);
-        err = SSH_ERROR;
-      } else {
-        file->eof = 1;
-      }
-      status_msg_free(status);
-      return err;
+        status = parse_status_msg(msg);
+        sftp_message_free(msg);
+        if (status == NULL) {
+            return -1;
+        }
+        sftp_set_error(sftp, status->status);
+        if (status->status != SSH_FX_EOF) {
+            ssh_set_error(sftp->session,
+                          SSH_REQUEST_DENIED,
+                          "SFTP server : %s",
+                          status->errormsg);
+            err = SSH_ERROR;
+        } else {
+            file->eof = 1;
+        }
+        status_msg_free(status);
+        return err;
     case SSH_FXP_DATA:
-      datastring = ssh_buffer_get_ssh_string(msg->payload);
-      sftp_message_free(msg);
-      if (datastring == NULL) {
-        ssh_set_error(sftp->session, SSH_FATAL,
-            "Received invalid DATA packet from sftp server");
-        return SSH_ERROR;
-      }
-      if (ssh_string_len(datastring) > size) {
-        ssh_set_error(sftp->session, SSH_FATAL,
-            "Received a too big DATA packet from sftp server: "
-            "%zu and asked for %" PRIu32,
-            ssh_string_len(datastring), size);
+        datastring = ssh_buffer_get_ssh_string(msg->payload);
+        sftp_message_free(msg);
+        if (datastring == NULL) {
+            ssh_set_error(sftp->session,
+                          SSH_FATAL,
+                          "Received invalid DATA packet from sftp server");
+            return SSH_ERROR;
+        }
+        if (ssh_string_len(datastring) > size) {
+            ssh_set_error(sftp->session,
+                          SSH_FATAL,
+                          "Received a too big DATA packet from sftp server: "
+                          "%zu and asked for %" PRIu32,
+                          ssh_string_len(datastring),
+                          size);
+            SSH_STRING_FREE(datastring);
+            return SSH_ERROR;
+        }
+        len = ssh_string_len(datastring);
+        /* Update the offset with the correct value */
+        file->offset = file->offset - (size - len);
+        memcpy(data, ssh_string_data(datastring), len);
         SSH_STRING_FREE(datastring);
+        return (int)len;
+    default:
+        ssh_set_error(sftp->session,
+                      SSH_FATAL,
+                      "Received message %d during read!",
+                      msg->packet_type);
+        sftp_message_free(msg);
+        sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
         return SSH_ERROR;
-      }
-      len = ssh_string_len(datastring);
-      /* Update the offset with the correct value */
-      file->offset = file->offset - (size - len);
-      memcpy(data, ssh_string_data(datastring), len);
-      SSH_STRING_FREE(datastring);
-      return (int)len;
-    default:
-      ssh_set_error(sftp->session,SSH_FATAL,"Received message %d during read!",msg->packet_type);
-      sftp_message_free(msg);
-      sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
-      return SSH_ERROR;
-  }
+    }
 
-  return SSH_ERROR;
+    return SSH_ERROR;
 }
 
-ssize_t sftp_write(sftp_file file, const void *buf, size_t count) {
-  sftp_session sftp;
-  sftp_message msg = NULL;
-  sftp_status_message status;
-  ssh_buffer buffer;
-  uint32_t id;
-  ssize_t len;
-  size_t packetlen;
-  int rc;
+ssize_t
+sftp_write(sftp_file file, const void *buf, size_t count)
+{
+    sftp_session sftp = NULL;
+    sftp_message msg = NULL;
+    sftp_status_message status;
+    ssh_buffer buffer = NULL;
+    uint32_t id;
+    ssize_t len;
+    size_t packetlen;
+    int rc;
 
-  if (file == NULL) {
-      return -1;
-  }
-  sftp = file->sftp;
-
-  buffer = ssh_buffer_new();
-  if (buffer == NULL) {
-    ssh_set_error_oom(sftp->session);
-    sftp_set_error(sftp, SSH_FX_FAILURE);
-    return -1;
-  }
-
-  id = sftp_get_new_id(file->sftp);
-
-  /*
-   * limit the writes to the maximum specified in Section 3 of
-   * https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-02
-   * or to the values provided by the limits@openssh.com extension.
-   *
-   * TODO: We should iterate over the blocks rather than writing less than
-   * requested to provide less surprises to the calling applications.
-   */
-  if (count > sftp->limits->max_write_length) {
-      if (sftp->limits->max_write_length > SIZE_MAX) {
-          return SSH_ERROR;
-      }
-      count = (size_t)sftp->limits->max_write_length;
-  }
-
-  rc = ssh_buffer_pack(buffer,
-                       "dSqdP",
-                       id,
-                       file->handle,
-                       file->offset,
-                       count, /* len of datastring */
-                       (size_t)count, buf);
-  if (rc != SSH_OK){
-    ssh_set_error_oom(sftp->session);
-    SSH_BUFFER_FREE(buffer);
-    sftp_set_error(sftp, SSH_FX_FAILURE);
-    return -1;
-  }
-  len = sftp_packet_write(file->sftp, SSH_FXP_WRITE, buffer);
-  packetlen=ssh_buffer_get_len(buffer);
-  SSH_BUFFER_FREE(buffer);
-  if (len < 0) {
-    return -1;
-  } else  if ((size_t)len != packetlen) {
-    SSH_LOG(SSH_LOG_PACKET,
-        "Could not write as much data as expected");
-  }
-
-  /* Wait for the response in blocking mode */
-  rc = sftp_recv_response_msg(sftp, id, true, &msg);
-  if (rc != SSH_OK) {
-      return -1;
-  }
-
-  switch (msg->packet_type) {
-    case SSH_FXP_STATUS:
-      status = parse_status_msg(msg);
-      sftp_message_free(msg);
-      if (status == NULL) {
+    if (file == NULL) {
         return -1;
-      }
-      sftp_set_error(sftp, status->status);
-      switch (status->status) {
+    }
+    sftp = file->sftp;
+
+    buffer = ssh_buffer_new();
+    if (buffer == NULL) {
+        ssh_set_error_oom(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+
+    id = sftp_get_new_id(file->sftp);
+
+    /*
+     * limit the writes to the maximum specified in Section 3 of
+     * https://datatracker.ietf.org/doc/html/draft-ietf-secsh-filexfer-02
+     * or to the values provided by the limits@openssh.com extension.
+     *
+     * TODO: We should iterate over the blocks rather than writing less than
+     * requested to provide less surprises to the calling applications.
+     */
+    if (count > sftp->limits->max_write_length) {
+        if (sftp->limits->max_write_length > SIZE_MAX) {
+            return SSH_ERROR;
+        }
+        count = (size_t)sftp->limits->max_write_length;
+    }
+
+    rc = ssh_buffer_pack(buffer,
+                         "dSqdP",
+                         id,
+                         file->handle,
+                         file->offset,
+                         count, /* len of datastring */
+                         (size_t)count, buf);
+    if (rc != SSH_OK) {
+        ssh_set_error_oom(sftp->session);
+        SSH_BUFFER_FREE(buffer);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+    len = sftp_packet_write(file->sftp, SSH_FXP_WRITE, buffer);
+    packetlen = ssh_buffer_get_len(buffer);
+    SSH_BUFFER_FREE(buffer);
+    if (len < 0) {
+        return -1;
+    } else if ((size_t)len != packetlen) {
+        SSH_LOG(SSH_LOG_PACKET, "Could not write as much data as expected");
+    }
+
+    /* Wait for the response in blocking mode */
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
+    }
+
+    switch (msg->packet_type) {
+    case SSH_FXP_STATUS:
+        status = parse_status_msg(msg);
+        sftp_message_free(msg);
+        if (status == NULL) {
+            return -1;
+        }
+        sftp_set_error(sftp, status->status);
+        switch (status->status) {
         case SSH_FX_OK:
-          file->offset += count;
-          status_msg_free(status);
-          return count;
+            file->offset += count;
+            status_msg_free(status);
+            return count;
         default:
-          break;
-      }
-      ssh_set_error(sftp->session, SSH_REQUEST_DENIED,
-          "SFTP server: %s", status->errormsg);
-      file->offset += count;
-      status_msg_free(status);
-      return -1;
+            break;
+        }
+        ssh_set_error(sftp->session,
+                      SSH_REQUEST_DENIED,
+                      "SFTP server: %s",
+                      status->errormsg);
+        file->offset += count;
+        status_msg_free(status);
+        return -1;
     default:
-      ssh_set_error(sftp->session, SSH_FATAL,
-          "Received message %d during write!", msg->packet_type);
-      sftp_message_free(msg);
-      sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
-      return -1;
-  }
+        ssh_set_error(sftp->session,
+                      SSH_FATAL,
+                      "Received message %d during write!",
+                      msg->packet_type);
+        sftp_message_free(msg);
+        sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
+        return -1;
+    }
 
-  return -1; /* not reached */
+    return -1; /* not reached */
 }
 
-/* Seek to a specific location in a file. */
-int sftp_seek(sftp_file file, uint32_t new_offset) {
-  if (file == NULL) {
-    return -1;
-  }
+/*  Seek to a specific location in a file. */
+int
+sftp_seek(sftp_file file, uint32_t new_offset)
+{
+    if (file == NULL) {
+        return -1;
+    }
 
-  file->offset = new_offset;
-  file->eof = 0;
+    file->offset = new_offset;
+    file->eof = 0;
 
-  return 0;
+    return 0;
 }
 
-int sftp_seek64(sftp_file file, uint64_t new_offset) {
-  if (file == NULL) {
-    return -1;
-  }
+int
+sftp_seek64(sftp_file file, uint64_t new_offset)
+{
+    if (file == NULL) {
+        return -1;
+    }
 
-  file->offset = new_offset;
-  file->eof = 0;
+    file->offset = new_offset;
+    file->eof = 0;
 
-  return 0;
+    return 0;
 }
 
 /* Report current byte position in file. */
