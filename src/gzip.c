@@ -260,3 +260,17 @@ decompress_buffer(ssh_session session, ssh_buffer buf, size_t maxlen)
     SSH_BUFFER_FREE(dest);
     return 0;
 }
+
+void
+compress_cleanup(struct ssh_crypto_struct *crypto)
+{
+    if (crypto->compress_out_ctx) {
+        deflateEnd(crypto->compress_out_ctx);
+    }
+    SAFE_FREE(crypto->compress_out_ctx);
+
+    if (crypto->compress_in_ctx) {
+        inflateEnd(crypto->compress_in_ctx);
+    }
+    SAFE_FREE(crypto->compress_in_ctx);
+}
