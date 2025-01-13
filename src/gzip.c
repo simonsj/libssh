@@ -50,6 +50,7 @@ initcompress(ssh_session session, int level)
 
     status = deflateInit(stream, level);
     if (status != Z_OK) {
+        deflateEnd(stream);
         SAFE_FREE(stream);
         ssh_set_error(session,
                       SSH_FATAL,
@@ -158,6 +159,7 @@ initdecompress(ssh_session session)
 
     status = inflateInit(stream);
     if (status != Z_OK) {
+        inflateEnd(stream);
         SAFE_FREE(stream);
         ssh_set_error(session,
                       SSH_FATAL,
