@@ -121,7 +121,7 @@ static void torture_options_set_host(void **state) {
     assert_string_equal(session->opts.host, "xn--bcher-kva.tld");
     assert_null(session->opts.username);
 
-    /* IDN in UTF8 wont work */
+    /* IDN in UTF8 won't work */
     rc = ssh_options_set(session, SSH_OPTIONS_HOST, "bücher.tld");
     assert_string_equal(ssh_get_error(session),
                         "Invalid argument in ssh_options_set");
