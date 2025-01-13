@@ -55,7 +55,7 @@ ssize_t sftp_aio_begin_read(sftp_file file, size_t len, sftp_aio *aio)
     sftp_session sftp = NULL;
     ssh_buffer buffer = NULL;
     sftp_aio aio_handle = NULL;
-    uint32_t id;
+    uint32_t id, read_len;
     int rc;
 
     if (file == NULL ||
@@ -73,13 +73,12 @@ ssize_t sftp_aio_begin_read(sftp_file file, size_t len, sftp_aio *aio)
         return SSH_ERROR;
     }
 
-    /* Apply a cap on the length a user is allowed to read */
-    if (len > sftp->limits->max_read_length) {
-        if (sftp->limits->max_read_length > SIZE_MAX) {
-            return SSH_ERROR;
-        }
-        len = (size_t)sftp->limits->max_read_length;
-    }
+    /* Apply a cap on the length a user is allowed to read
+     *
+     * The limits are in theory uint64, but packet contain data length in uint32
+     * so in practice, the limit will never be larger than UINT32_MAX
+     */
+    read_len = (uint32_t)MIN(sftp->limits->max_read_length, len);
 
     if (aio == NULL) {
         ssh_set_error(sftp->session, SSH_FATAL,
@@ -103,7 +102,7 @@ ssize_t sftp_aio_begin_read(sftp_file file, size_t len, sftp_aio *aio)
                          id,
                          file->handle,
                          file->offset,
-                         len);
+                         read_len);
 
     if (rc != SSH_OK) {
         ssh_set_error_oom(sftp->session);
@@ -122,7 +121,7 @@ ssize_t sftp_aio_begin_read(sftp_file file, size_t len, sftp_aio *aio)
 
     aio_handle->file = file;
     aio_handle->id = id;
-    aio_handle->len = len;
+    aio_handle->len = read_len;
 
     rc = sftp_packet_write(sftp, SSH_FXP_READ, buffer);
     SSH_BUFFER_FREE(buffer);
@@ -132,9 +131,9 @@ ssize_t sftp_aio_begin_read(sftp_file file, size_t len, sftp_aio *aio)
     }
 
     /* Assume we read len bytes from the file */
-    file->offset += len;
+    file->offset += read_len;
     *aio = aio_handle;
-    return len;
+    return read_len;
 }
 
 ssize_t sftp_aio_wait_read(sftp_aio *aio,
@@ -312,7 +311,7 @@ ssize_t sftp_aio_begin_write(sftp_file file,
     sftp_session sftp = NULL;
     ssh_buffer buffer = NULL;
     sftp_aio aio_handle = NULL;
-    uint32_t id;
+    uint32_t id, write_len;
     int rc;
 
     if (file == NULL ||
@@ -338,13 +337,12 @@ ssize_t sftp_aio_begin_write(sftp_file file,
         return SSH_ERROR;
     }
 
-    /* Apply a cap on the length a user is allowed to write */
-    if (len > sftp->limits->max_write_length) {
-        if (sftp->limits->max_write_length > SIZE_MAX) {
-            return SSH_ERROR;
-        }
-        len = (size_t)sftp->limits->max_write_length;
-    }
+    /* Apply a cap on the length a user is allowed to write
+     *
+     * The limits are in theory uint64, but packet contain data length in uint32
+     * so in practice, the limit will never be larger than UINT32_MAX
+     */
+    write_len = (uint32_t)MIN(sftp->limits->max_write_length, len);
 
     if (aio == NULL) {
         ssh_set_error(sftp->session, SSH_FATAL,
@@ -367,8 +365,9 @@ ssize_t sftp_aio_begin_write(sftp_file file,
                          id,
                          file->handle,
                          file->offset,
-                         len, /* len of datastring */
-                         len, buf);
+                         write_len, /* len of datastring */
+                         (size_t)write_len,
+                         buf);
 
     if (rc != SSH_OK) {
         ssh_set_error_oom(sftp->session);
@@ -387,7 +386,7 @@ ssize_t sftp_aio_begin_write(sftp_file file,
 
     aio_handle->file = file;
     aio_handle->id = id;
-    aio_handle->len = len;
+    aio_handle->len = write_len;
 
     rc = sftp_packet_write(sftp, SSH_FXP_WRITE, buffer);
     SSH_BUFFER_FREE(buffer);
@@ -397,9 +396,9 @@ ssize_t sftp_aio_begin_write(sftp_file file,
     }
 
     /* Assume we wrote len bytes to the file */
-    file->offset += len;
+    file->offset += write_len;
     *aio = aio_handle;
-    return len;
+    return write_len;
 }
 
 ssize_t sftp_aio_wait_write(sftp_aio *aio)

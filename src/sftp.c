@@ -1140,7 +1140,7 @@ sftp_read(sftp_file handle, void *buf, size_t count)
     ssh_string datastring = NULL;
     size_t datalen;
     ssh_buffer buffer = NULL;
-    uint32_t id;
+    uint32_t id, read_len;
     int rc;
 
     if (handle == NULL) {
@@ -1159,13 +1159,11 @@ sftp_read(sftp_file handle, void *buf, size_t count)
      *
      * TODO: We should iterate over the blocks rather than writing less than
      * requested to provide less surprises to the calling applications.
+     *
+     * The limits are in theory uint64, but packet contain data length in uint32
+     * so in practice, the limit will never be larger than UINT32_MAX
      */
-    if (count > sftp->limits->max_read_length) {
-        if (sftp->limits->max_read_length > SIZE_MAX) {
-            return SSH_ERROR;
-        }
-        count = (size_t)sftp->limits->max_read_length;
-    }
+    read_len = (uint32_t)MIN(sftp->limits->max_read_length, count);
 
     buffer = ssh_buffer_new();
     if (buffer == NULL) {
@@ -1180,7 +1178,7 @@ sftp_read(sftp_file handle, void *buf, size_t count)
                          id,
                          handle->handle,
                          handle->offset,
-                         count);
+                         read_len);
     if (rc != SSH_OK) {
         ssh_set_error_oom(sftp->session);
         SSH_BUFFER_FREE(buffer);
@@ -1392,7 +1390,7 @@ sftp_write(sftp_file file, const void *buf, size_t count)
     sftp_message msg = NULL;
     sftp_status_message status;
     ssh_buffer buffer = NULL;
-    uint32_t id;
+    uint32_t id, write_len;
     ssize_t len;
     size_t packetlen;
     int rc;
@@ -1418,21 +1416,20 @@ sftp_write(sftp_file file, const void *buf, size_t count)
      *
      * TODO: We should iterate over the blocks rather than writing less than
      * requested to provide less surprises to the calling applications.
+     *
+     * The limits are in theory uint64, but packet contain data length in uint32
+     * so in practice, the limit will never be larger than UINT32_MAX
      */
-    if (count > sftp->limits->max_write_length) {
-        if (sftp->limits->max_write_length > SIZE_MAX) {
-            return SSH_ERROR;
-        }
-        count = (size_t)sftp->limits->max_write_length;
-    }
+    write_len = (uint32_t)MIN(sftp->limits->max_write_length, count);
 
     rc = ssh_buffer_pack(buffer,
                          "dSqdP",
                          id,
                          file->handle,
                          file->offset,
-                         count, /* len of datastring */
-                         (size_t)count, buf);
+                         write_len, /* len of datastring */
+                         (size_t)write_len,
+                         buf);
     if (rc != SSH_OK) {
         ssh_set_error_oom(sftp->session);
         SSH_BUFFER_FREE(buffer);
@@ -1464,9 +1461,9 @@ sftp_write(sftp_file file, const void *buf, size_t count)
         sftp_set_error(sftp, status->status);
         switch (status->status) {
         case SSH_FX_OK:
-            file->offset += count;
+            file->offset += write_len;
             status_msg_free(status);
-            return count;
+            return write_len;
         default:
             break;
         }
@@ -1474,7 +1471,7 @@ sftp_write(sftp_file file, const void *buf, size_t count)
                       SSH_REQUEST_DENIED,
                       "SFTP server: %s",
                       status->errormsg);
-        file->offset += count;
+        file->offset += write_len;
         status_msg_free(status);
         return -1;
     default:
@@ -2687,6 +2684,11 @@ static sftp_limits_t sftp_parse_limits(sftp_session sftp, ssh_buffer buf)
         sftp_set_error(sftp, SSH_FX_FAILURE);
         return NULL;
     }
+    /* cap the max read and write length to UINT32_MAX as we really can not read
+     * nor write more as the len member of the SSH_FXP_READ/WRITE packets is
+     * uint32 */
+    limits->max_read_length = MIN(limits->max_read_length, UINT32_MAX);
+    limits->max_write_length = MIN(limits->max_write_length, UINT32_MAX);
 
     return limits;
 }
