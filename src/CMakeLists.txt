@@ -91,6 +91,7 @@ set(libssh_SRCS
   ecdh.c
   error.c
   getpass.c
+  gzip.c
   init.c
   kdf.c
   kex.c
@@ -251,13 +252,6 @@ if (WITH_GEX)
     dh-gex.c
   )
 endif (WITH_GEX)
-
-if (WITH_ZLIB)
-  set(libssh_SRCS
-    ${libssh_SRCS}
-    gzip.c
-  )
-endif(WITH_ZLIB)
 
 if (WITH_GSSAPI AND GSSAPI_FOUND)
   set(libssh_SRCS

@@ -1303,7 +1303,6 @@ ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
             ssh_buffer_pass_bytes_end(session->in_buffer, padding);
             compsize = ssh_buffer_get_len(session->in_buffer);
 
-#ifdef WITH_ZLIB
             if (crypto && crypto->do_compress_in &&
                 ssh_buffer_get_len(session->in_buffer) > 0) {
                 rc = decompress_buffer(session, session->in_buffer,
@@ -1312,7 +1311,6 @@ ssh_packet_socket_callback(const void *data, size_t receivedlen, void *user)
                     goto error;
                 }
             }
-#endif /* WITH_ZLIB */
             payloadsize = ssh_buffer_get_len(session->in_buffer);
             if (session->recv_seq == UINT32_MAX) {
                 /* Overflowing sequence numbers is always fishy */
@@ -1706,7 +1704,6 @@ static int packet_send2(ssh_session session)
         lenfield_blocksize = 0;
     }
 
-#ifdef WITH_ZLIB
     if (crypto != NULL && crypto->do_compress_out &&
         ssh_buffer_get_len(session->out_buffer) > 0) {
         rc = compress_buffer(session,session->out_buffer);
@@ -1715,7 +1712,6 @@ static int packet_send2(ssh_session session)
         }
         currentlen = ssh_buffer_get_len(session->out_buffer);
     }
-#endif /* WITH_ZLIB */
     compsize = currentlen;
     /* compressed payload + packet len (4) + padding_size len (1) */
     /* totallen - lenfield_blocksize - etm_packet_offset must be equal to 0 (mod blocksize) */

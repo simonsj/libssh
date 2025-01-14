@@ -197,9 +197,7 @@ void crypto_free(struct ssh_crypto_struct *crypto)
         explicit_bzero(crypto->secret_hash, crypto->digest_len);
         SAFE_FREE(crypto->secret_hash);
     }
-#ifdef WITH_ZLIB
     compress_cleanup(crypto);
-#endif /* WITH_ZLIB */
     SAFE_FREE(crypto->encryptIV);
     SAFE_FREE(crypto->decryptIV);
     SAFE_FREE(crypto->encryptMAC);

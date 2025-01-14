@@ -26,12 +26,14 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <zlib.h>
 
 #include "libssh/buffer.h"
 #include "libssh/crypto.h"
 #include "libssh/priv.h"
 #include "libssh/session.h"
+
+#ifdef WITH_ZLIB
+#include <zlib.h>
 
 #ifndef BLOCKSIZE
 #define BLOCKSIZE 4092
@@ -274,3 +276,27 @@ compress_cleanup(struct ssh_crypto_struct *crypto)
     }
     SAFE_FREE(crypto->compress_in_ctx);
 }
+#else /* WITH_ZLIB */
+
+int
+compress_buffer(UNUSED_PARAM(ssh_session session), UNUSED_PARAM(ssh_buffer buf))
+{
+    /* without zlib compiled in, this should never happen */
+    return -1;
+}
+int
+decompress_buffer(UNUSED_PARAM(ssh_session session),
+                  UNUSED_PARAM(ssh_buffer buf),
+                  UNUSED_PARAM(size_t maxlen))
+{
+    /* without zlib compiled in, this should never happen */
+    return -1;
+}
+
+void
+compress_cleanup(UNUSED_PARAM(struct ssh_crypto_struct *crypto))
+{
+    /* no-op */
+}
+
+#endif /* WITH_ZLIB */
