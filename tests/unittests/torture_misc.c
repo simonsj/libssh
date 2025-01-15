@@ -244,27 +244,22 @@ static void torture_path_expand_tilde_win(void **state) {
 #else /* _WIN32 */
 
 static void torture_path_expand_tilde_unix(void **state) {
-    char h[256];
-    char *d;
-    char *user;
-    char *home;
+    char h[256] = {0};
+    char *d = NULL;
+    char *user = NULL;
+    char *home = NULL;
+    struct passwd *pw = NULL;
 
     (void) state;
 
-    user = getenv("USER");
-    if (user == NULL){
-        user = getenv("LOGNAME");
-    }
-    /* in certain CIs there no such variables */
-    if (!user){
-        struct passwd *pw = getpwuid(getuid());
-        if (pw){
-            user = pw->pw_name;
-        }
-    }
+    pw = getpwuid(getuid());
+    assert_non_null(pw);
 
-    home = getenv("HOME");
+    user = pw->pw_name;
+    assert_non_null(user);
+    home = pw->pw_dir;
     assert_non_null(home);
+
     snprintf(h, 256 - 1, "%s/.ssh", home);
 
     d = ssh_path_expand_tilde("~/.ssh");
