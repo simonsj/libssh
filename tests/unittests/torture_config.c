@@ -2392,24 +2392,14 @@ static void torture_config_make_absolute_int(void **state, bool no_sshdir_fails)
     ssh_session session = *state;
     char *result = NULL;
 #ifndef _WIN32
-    char h[256];
-    char *user;
-    char *home;
-
-    user = getenv("USER");
-    if (user == NULL) {
-        user = getenv("LOGNAME");
-    }
-
-    /* in certain CIs there no such variables */
-    if (!user) {
-        struct passwd *pw = getpwuid(getuid());
-        if (pw){
-            user = pw->pw_name;
-        }
-    }
-
-    home = getenv("HOME");
+    char h[256] = {0};
+    char *user = NULL;
+    char *home = NULL;
+    struct passwd *pw = getpwuid(getuid());
+    assert_non_null(pw);
+    user = pw->pw_name;
+    assert_non_null(user);
+    home = pw->pw_dir;
     assert_non_null(home);
 #endif
 
