@@ -40,7 +40,10 @@ static ssh_string make_bignum_string(bignum num, size_t pad_to_len)
             pad++;
         }
     } else {
-        pad = pad_to_len - bignum_num_bytes(num);
+        if (len > pad_to_len) {
+            return NULL;
+        }
+        pad = pad_to_len - len;
     }
 
 #ifdef DEBUG_CRYPTO

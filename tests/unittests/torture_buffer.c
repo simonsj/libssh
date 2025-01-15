@@ -277,16 +277,25 @@ static void torture_ssh_buffer_bignum(void **state)
 
     num = bignum_new();
     assert_non_null(num);
-    assert_int_equal(1, bignum_set_word(num, 255));
+
+    rc = bignum_set_word(num, 255);
+    assert_int_equal(rc, 1);
 
     rc = ssh_buffer_pack(buffer, "FB", num, (size_t)4, num);
     assert_int_equal(rc, SSH_OK);
 
-    bignum_safe_free(num);
-
     len = ssh_buffer_get_len(buffer);
     assert_int_equal(len, sizeof(verif) - 1);
     assert_memory_equal(ssh_buffer_get(buffer), verif, sizeof(verif) - 1);
+
+    /* negative test -- this number requires 3 bytes */
+    rc = bignum_set_word(num, 256 * 256);
+    assert_int_equal(rc, 1);
+
+    rc = ssh_buffer_pack(buffer, "FB", num, (size_t)2, num);
+    assert_int_equal(rc, SSH_ERROR);
+
+    bignum_safe_free(num);
 
     SSH_BUFFER_FREE(buffer);
 }
