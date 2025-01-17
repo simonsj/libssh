@@ -102,9 +102,18 @@ static void sftp_ext_free(sftp_ext ext)
 
 sftp_session sftp_new(ssh_session session)
 {
-    sftp_session sftp;
+    sftp_session sftp = NULL;
+    int rc;
 
     if (session == NULL) {
+        return NULL;
+    }
+
+    if (!ssh_is_blocking(session)) {
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "The SSH session needs to be set to blocking mode for "
+                      "SFTP to work correctly.");
         return NULL;
     }
 
@@ -140,11 +149,18 @@ sftp_session sftp_new(ssh_session session)
         goto error;
     }
 
-    if (ssh_channel_open_session(sftp->channel)) {
+    /*
+     * The following two calls shouldn't return SSH_AGAIN
+     * as the code has validated above that the SSH session
+     * is in blocking mode.
+     */
+    rc = ssh_channel_open_session(sftp->channel);
+    if (rc != SSH_OK) {
         goto error;
     }
 
-    if (ssh_channel_request_sftp(sftp->channel)) {
+    rc = ssh_channel_request_sftp(sftp->channel);
+    if (rc != SSH_OK) {
         goto error;
     }
 
