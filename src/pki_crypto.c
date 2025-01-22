@@ -452,6 +452,21 @@ int pki_pubkey_build_ed25519(ssh_key key, ssh_string pubkey)
         return SSH_ERROR;
     }
 
+    if (ssh_fips_mode()) {
+        /* We do not want to fail here as we know the algorithm, but we can not
+         * use it. Just store the public key here. We won't be able to use it
+         * for anything though. */
+        key->ed25519_pubkey = malloc(ED25519_KEY_LEN);
+        if (key->ed25519_pubkey == NULL) {
+            SSH_LOG(SSH_LOG_TRACE,
+                    "Failed to allocate memory for the Ed25519 public key");
+            return SSH_ERROR;
+        }
+
+        memcpy(key->ed25519_pubkey, ssh_string_data(pubkey), ED25519_KEY_LEN);
+        return SSH_OK;
+    }
+
     pkey = EVP_PKEY_new_raw_public_key(EVP_PKEY_ED25519,
                                        NULL,
                                        (const uint8_t *)ssh_string_data(pubkey),
@@ -966,10 +981,11 @@ int pki_key_generate_ecdsa(ssh_key key, int parameter)
  */
 int pki_key_compare(const ssh_key k1, const ssh_key k2, enum ssh_keycmp_e what)
 {
-    int rc;
+    int rc, cmp;
 
     (void)what;
 
+    /* We got here only if the types match */
     switch (ssh_key_type_plain(k1->type)) {
     case SSH_KEYTYPE_ECDSA_P256:
     case SSH_KEYTYPE_ECDSA_P384:
@@ -1016,10 +1032,28 @@ int pki_key_compare(const ssh_key k1, const ssh_key k2, enum ssh_keycmp_e what)
     }
 #endif /* HAVE_OPENSSL_ECC */
 #endif /* OPENSSL_VERSION_NUMBER */
-    case SSH_KEYTYPE_RSA:
-    case SSH_KEYTYPE_RSA1:
     case SSH_KEYTYPE_ED25519:
     case SSH_KEYTYPE_SK_ED25519:
+        /* In FIPS mode, we can not use OpenSSL to compare Ed25519 keys.
+         * The OpenSSL < 3.0 also crashes in EVP_PKEY_eq() when either of
+         * keys keys is NULL so catch it here. */
+        if (ssh_fips_mode() && k1->key == NULL && k2->key == NULL) {
+            if (what == SSH_KEY_CMP_PRIVATE) {
+                /* we should never have Ed25519 private key in FIPS mode */
+                return 1;
+            }
+            cmp = memcmp(k1->ed25519_pubkey,
+                         k2->ed25519_pubkey,
+                         ED25519_KEY_LEN);
+            if (cmp != 0) {
+                return 1;
+            }
+            /* they match */
+            return 0;
+        }
+        FALL_THROUGH;
+    case SSH_KEYTYPE_RSA:
+    case SSH_KEYTYPE_RSA1:
         rc = EVP_PKEY_eq(k1->key, k2->key);
         if (rc != 1) {
             return 1;

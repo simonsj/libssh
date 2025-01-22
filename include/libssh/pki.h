@@ -66,6 +66,9 @@ struct ssh_key_struct {
     /* This holds either ENGINE/PROVIDER key for PKCS#11 support
      * or just key in high-level format */
     EVP_PKEY *key;
+    /* keep this around for FIPS mode so we can parse the public keys. We won't
+     * be able to use them nor use the private keys though */
+    uint8_t *ed25519_pubkey;
 #endif /* HAVE_LIBGCRYPT */
 #ifndef HAVE_LIBCRYPTO
     ed25519_pubkey *ed25519_pubkey;
