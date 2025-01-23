@@ -283,7 +283,7 @@ torture_run_tests(void)
     };
 
     ssh_session session = ssh_new();
-    int verbosity = SSH_LOG_FUNCTIONS;
+    int verbosity = torture_libssh_verbosity();
 
     /* Do not use system openssl.cnf for the pkcs11 uri tests.
      * It can load a pkcs11 provider too early before we will set up environment
