@@ -899,47 +899,50 @@ ssh_string pki_private_key_to_pem(const ssh_key key,
     }
 
     switch (key->type) {
-        case SSH_KEYTYPE_RSA:
-        case SSH_KEYTYPE_RSA1:
-        case SSH_KEYTYPE_ECDSA_P256:
-        case SSH_KEYTYPE_ECDSA_P384:
-        case SSH_KEYTYPE_ECDSA_P521:
-            rc = EVP_PKEY_up_ref(key->key);
-            if (rc != 1) {
-                goto err;
-            }
-            pkey = key->key;
-
-            /* Mark the operation as successful as for the other key types */
-            rc = 1;
-
-            break;
-        case SSH_KEYTYPE_ED25519:
-            /* In OpenSSL, the input is the private key seed only, which means
-             * the first half of the SSH private key (the second half is the
-             * public key) */
-            pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519, NULL,
-                    (const uint8_t *)key->ed25519_privkey,
-                    ED25519_KEY_LEN);
-            if (pkey == NULL) {
-                SSH_LOG(SSH_LOG_TRACE,
-                        "Failed to create ed25519 EVP_PKEY: %s",
-                        ERR_error_string(ERR_get_error(), NULL));
-                goto err;
-            }
-
-            /* Mark the operation as successful as for the other key types */
-            rc = 1;
-            break;
-        case SSH_KEYTYPE_RSA_CERT01:
-        case SSH_KEYTYPE_ECDSA_P256_CERT01:
-        case SSH_KEYTYPE_ECDSA_P384_CERT01:
-        case SSH_KEYTYPE_ECDSA_P521_CERT01:
-        case SSH_KEYTYPE_ED25519_CERT01:
-        case SSH_KEYTYPE_UNKNOWN:
-        default:
-            SSH_LOG(SSH_LOG_TRACE, "Unknown or invalid private key type %d", key->type);
+    case SSH_KEYTYPE_RSA:
+    case SSH_KEYTYPE_RSA1:
+    case SSH_KEYTYPE_ECDSA_P256:
+    case SSH_KEYTYPE_ECDSA_P384:
+    case SSH_KEYTYPE_ECDSA_P521:
+        rc = EVP_PKEY_up_ref(key->key);
+        if (rc != 1) {
             goto err;
+        }
+        pkey = key->key;
+
+        /* Mark the operation as successful as for the other key types */
+        rc = 1;
+
+        break;
+    case SSH_KEYTYPE_ED25519:
+        /* In OpenSSL, the input is the private key seed only, which means
+         * the first half of the SSH private key (the second half is the
+         * public key) */
+        pkey = EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519,
+                                            NULL,
+                                            (const uint8_t *)key->ed25519_privkey,
+                                            ED25519_KEY_LEN);
+        if (pkey == NULL) {
+            SSH_LOG(SSH_LOG_TRACE,
+                    "Failed to create ed25519 EVP_PKEY: %s",
+                    ERR_error_string(ERR_get_error(), NULL));
+            goto err;
+        }
+
+        /* Mark the operation as successful as for the other key types */
+        rc = 1;
+        break;
+    case SSH_KEYTYPE_RSA_CERT01:
+    case SSH_KEYTYPE_ECDSA_P256_CERT01:
+    case SSH_KEYTYPE_ECDSA_P384_CERT01:
+    case SSH_KEYTYPE_ECDSA_P521_CERT01:
+    case SSH_KEYTYPE_ED25519_CERT01:
+    case SSH_KEYTYPE_UNKNOWN:
+    default:
+        SSH_LOG(SSH_LOG_TRACE,
+                "Unknown or invalid private key type %d",
+                key->type);
+        goto err;
     }
     if (rc != 1) {
         SSH_LOG(SSH_LOG_TRACE, "Failed to initialize EVP_PKEY structure");
