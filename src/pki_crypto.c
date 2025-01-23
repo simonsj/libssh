@@ -811,73 +811,71 @@ int pki_key_generate_ecdsa(ssh_key key, int parameter)
 /* With OpenSSL 3.0 and higher the parameter 'what'
  * is ignored and the comparison is done by OpenSSL
  */
-int pki_key_compare(const ssh_key k1,
-                    const ssh_key k2,
-                    enum ssh_keycmp_e what)
+int pki_key_compare(const ssh_key k1, const ssh_key k2, enum ssh_keycmp_e what)
 {
     int rc;
 
     (void)what;
 
     switch (ssh_key_type_plain(k1->type)) {
-        case SSH_KEYTYPE_ECDSA_P256:
-        case SSH_KEYTYPE_ECDSA_P384:
-        case SSH_KEYTYPE_ECDSA_P521:
-        case SSH_KEYTYPE_SK_ECDSA:
+    case SSH_KEYTYPE_ECDSA_P256:
+    case SSH_KEYTYPE_ECDSA_P384:
+    case SSH_KEYTYPE_ECDSA_P521:
+    case SSH_KEYTYPE_SK_ECDSA:
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
 #ifdef HAVE_OPENSSL_ECC
-            {
-                const EC_KEY *ec1 = EVP_PKEY_get0_EC_KEY(k1->key);
-                const EC_KEY *ec2 = EVP_PKEY_get0_EC_KEY(k2->key);
-                const EC_POINT *p1 = NULL;
-                const EC_POINT *p2 = NULL;
-                const EC_GROUP *g1 = NULL;
-                const EC_GROUP *g2 = NULL;
+    {
+        const EC_KEY *ec1 = EVP_PKEY_get0_EC_KEY(k1->key);
+        const EC_KEY *ec2 = EVP_PKEY_get0_EC_KEY(k2->key);
+        const EC_POINT *p1 = NULL;
+        const EC_POINT *p2 = NULL;
+        const EC_GROUP *g1 = NULL;
+        const EC_GROUP *g2 = NULL;
 
-                if (ec1 == NULL || ec2 == NULL) {
-                    return 1;
-                }
+        if (ec1 == NULL || ec2 == NULL) {
+            return 1;
+        }
 
-                p1 = EC_KEY_get0_public_key(ec1);
-                p2 = EC_KEY_get0_public_key(ec2);
-                g1 = EC_KEY_get0_group(ec1);
-                g2 = EC_KEY_get0_group(ec2);
+        p1 = EC_KEY_get0_public_key(ec1);
+        p2 = EC_KEY_get0_public_key(ec2);
+        g1 = EC_KEY_get0_group(ec1);
+        g2 = EC_KEY_get0_group(ec2);
 
-                if (p1 == NULL || p2 == NULL || g1 == NULL || g2 == NULL) {
-                    return 1;
-                }
+        if (p1 == NULL || p2 == NULL || g1 == NULL || g2 == NULL) {
+            return 1;
+        }
 
-                if (EC_GROUP_cmp(g1, g2, NULL) != 0) {
-                    return 1;
-                }
+        if (EC_GROUP_cmp(g1, g2, NULL) != 0) {
+            return 1;
+        }
 
-                if (EC_POINT_cmp(g1, p1, p2, NULL) != 0) {
-                    return 1;
-                }
+        if (EC_POINT_cmp(g1, p1, p2, NULL) != 0) {
+            return 1;
+        }
 
-                if (what == SSH_KEY_CMP_PRIVATE) {
-                    if (bignum_cmp(EC_KEY_get0_private_key(ec1),
-                                   EC_KEY_get0_private_key(ec2))) {
-                        return 1;
-                    }
-                }
-                break;
-            }
-#endif /* HAVE_OPENSSL_ECC */
-#endif /* OPENSSL_VERSION_NUMBER */
-        case SSH_KEYTYPE_RSA:
-        case SSH_KEYTYPE_RSA1:
-            rc = EVP_PKEY_eq(k1->key, k2->key);
-            if (rc != 1) {
+        if (what == SSH_KEY_CMP_PRIVATE) {
+            if (bignum_cmp(EC_KEY_get0_private_key(ec1),
+                           EC_KEY_get0_private_key(ec2))) {
                 return 1;
             }
-            break;
-        case SSH_KEYTYPE_ED25519:
-        case SSH_KEYTYPE_SK_ED25519:
-            /* ed25519 keys handled globally */
-        case SSH_KEYTYPE_UNKNOWN:
-        default:
+        }
+        break;
+    }
+#endif /* HAVE_OPENSSL_ECC */
+#endif /* OPENSSL_VERSION_NUMBER */
+    case SSH_KEYTYPE_RSA:
+    case SSH_KEYTYPE_RSA1:
+        rc = EVP_PKEY_eq(k1->key, k2->key);
+        if (rc != 1) {
             return 1;
+        }
+        break;
+    case SSH_KEYTYPE_ED25519:
+    case SSH_KEYTYPE_SK_ED25519:
+        /* ed25519 keys handled globally */
+    case SSH_KEYTYPE_UNKNOWN:
+    default:
+        return 1;
     }
     return 0;
 }
