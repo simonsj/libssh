@@ -730,6 +730,11 @@ coverity:
     - brew update
     - brew install cmake openssl cmocka doxygen
     - mkdir obj && cd obj
+  only:
+    - branches@libssh/libssh-mirror
+    - branches@cryptomilk/libssh-mirror
+    - branches@jjelen/libssh-mirror
+    - branches@marco.fortina/libssh-mirror
 
 # TODO add -DFUZZ_TESTING=ON clang cant find _LLVMFuzzerInitialize on arm64
 macos-m1:
