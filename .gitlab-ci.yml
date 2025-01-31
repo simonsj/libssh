@@ -30,6 +30,7 @@ workflow:
 .build_options:
   variables:
     CMAKE_DEFAULT_OPTIONS: "-DCMAKE_BUILD_TYPE=RelWithDebInfo -DPICKY_DEVELOPER=ON"
+    CMAKE_DEFAULT_DEBUG_OPTIONS: "-DCMAKE_C_FLAGS='-O0 -g -ggdb' -DPICKY_DEVELOPER=ON"
     CMAKE_BUILD_OPTIONS: "-DWITH_BLOWFISH_CIPHER=ON -DWITH_SFTP=ON -DWITH_SERVER=ON -DWITH_ZLIB=ON -DWITH_PCAP=ON -DWITH_DEBUG_CRYPTO=ON -DWITH_DEBUG_PACKET=ON -DWITH_DEBUG_CALLTRACE=ON"
     CMAKE_TEST_OPTIONS: "-DUNIT_TESTING=ON -DCLIENT_TESTING=ON -DSERVER_TESTING=ON -DGSSAPI_TESTING=ON -DWITH_BENCHMARKS=ON -DFUZZ_TESTING=ON"
     CMAKE_OPTIONS: $CMAKE_DEFAULT_OPTIONS $CMAKE_BUILD_OPTIONS $CMAKE_TEST_OPTIONS
@@ -446,7 +447,7 @@ fedora/abidiff:
   stage: analysis
   variables:
     GIT_DEPTH: "100"
-    CMAKE_OPTIONS: $CMAKE_DEFAULT_OPTIONS $CMAKE_BUILD_OPTIONS
+    CMAKE_OPTIONS: $CMAKE_DEFAULT_DEBUG_OPTIONS $CMAKE_BUILD_OPTIONS
   image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
   before_script:
     - uname -a
@@ -480,12 +481,14 @@ fedora/abidiff:
     - cmake ${CMAKE_OPTIONS} -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR1} .. &&
       make -j$(nproc) && make -j$(nproc) install
     - popd
+    - ls -l ${INSTALL_DIR1}/lib*/
     - git checkout ${CI_COMMIT_SHA}
     - pushd obj-${CI_COMMIT_SHA}
     - cmake ${CMAKE_OPTIONS} -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR2} .. &&
       make -j$(nproc) && make -j$(nproc) install
     - popd
-    - abidiff --headers-dir1 ${INSTALL_DIR1}/include/libssh/ --headers-dir2 ${INSTALL_DIR2}/include/libssh/ ${INSTALL_DIR1}/lib64/libssh.so ${INSTALL_DIR2}/lib64/libssh.so
+    - ls -l ${INSTALL_DIR2}/lib*/
+    - ./.gitlab-ci/checkabi.sh ${INSTALL_DIR1} ${INSTALL_DIR2}
   tags:
     - saas-linux-small-amd64
   except:
