@@ -481,3 +481,11 @@ LIBSSH_4_10_0    # Released
         ssh_pki_export_privkey_file_format;
         ssh_request_no_more_sessions;
 } LIBSSH_4_9_0;
+
+LIBSSH_AFTER_4_10_0
+{
+    global:
+        sftp_get_users_groups_by_id;
+        sftp_name_id_map_free;
+        sftp_name_id_map_new;
+} LIBSSH_4_10_0;

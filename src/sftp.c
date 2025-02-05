@@ -3305,4 +3305,216 @@ sftp_home_directory(sftp_session sftp, const char *username)
     return NULL;
 }
 
+sftp_name_id_map sftp_name_id_map_new(uint32_t count)
+{
+    sftp_name_id_map map = NULL;
+
+    map = calloc(1, sizeof(struct sftp_name_id_map_struct));
+    if (map == NULL) {
+        return NULL;
+    }
+
+    map->count = count;
+
+    map->ids = calloc(count, sizeof(uint32_t));
+    if (map->ids == NULL) {
+        SAFE_FREE(map);
+        return NULL;
+    }
+
+    map->names = calloc(count, sizeof(char *));
+    if (map->names == NULL) {
+        SAFE_FREE(map->ids);
+        SAFE_FREE(map);
+        return NULL;
+    }
+
+    return map;
+}
+
+void sftp_name_id_map_free(sftp_name_id_map map)
+{
+    if (map == NULL) {
+        return;
+    }
+
+    SAFE_FREE(map->ids);
+
+    if (map->names != NULL) {
+        for (uint32_t i = 0; i < map->count; i++) {
+            SAFE_FREE(map->names[i]);
+        }
+        SAFE_FREE(map->names);
+    }
+
+    SAFE_FREE(map);
+}
+
+static int sftp_buffer_add_ids(ssh_buffer buffer, sftp_name_id_map map)
+{
+    uint32_t id_count = map ? map->count : 0;
+    int rc;
+
+    rc = ssh_buffer_pack(buffer, "d", sizeof(uint32_t) * id_count);
+    if (rc != SSH_OK) {
+        return -1;
+    }
+
+    for (uint32_t i = 0; i < id_count; i++) {
+        rc = ssh_buffer_pack(buffer, "d", map->ids[i]);
+        if (rc != SSH_OK) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+static int sftp_parse_names(ssh_buffer buffer, sftp_name_id_map map)
+{
+    uint32_t name_buf_len = 0;
+    char *name = NULL;
+    uint32_t id_count = map ? map->count : 0;
+    int rc;
+
+    rc = ssh_buffer_unpack(buffer, "d", &name_buf_len);
+    if (rc != SSH_OK) {
+        return -1;
+    }
+
+    for (uint32_t i = 0; i < id_count; i++) {
+        rc = ssh_buffer_unpack(buffer, "s", &name);
+        if (rc != SSH_OK) {
+            return -1;
+        }
+
+        name_buf_len -= strlen(name) + sizeof(uint32_t);
+        map->names[i] = name;
+    }
+
+    if (name_buf_len != 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int sftp_get_users_groups_by_id(sftp_session sftp,
+                                sftp_name_id_map users_map,
+                                sftp_name_id_map groups_map)
+{
+    sftp_status_message status = NULL;
+    sftp_message msg = NULL;
+    ssh_buffer buffer = NULL;
+    uint32_t id;
+    int rc;
+
+    if (sftp == NULL) {
+        return -1;
+    }
+
+    /* check if the user has provided the correct arguments */
+    if (users_map == NULL && groups_map == NULL) {
+        ssh_set_error(sftp->session,
+                      SSH_FATAL,
+                      "Both users map and groups map cannot be NULL");
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+
+    buffer = ssh_buffer_new();
+    if (buffer == NULL) {
+        ssh_set_error_oom(sftp->session);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+
+    id = sftp_get_new_id(sftp);
+
+    rc = ssh_buffer_pack(buffer, "ds", id, "users-groups-by-id@openssh.com");
+    if (rc != SSH_OK) {
+        ssh_set_error_oom(sftp->session);
+        SSH_BUFFER_FREE(buffer);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+
+    /* pack all uids */
+    rc = sftp_buffer_add_ids(buffer, users_map);
+    if (rc != SSH_OK) {
+        ssh_set_error_oom(sftp->session);
+        SSH_BUFFER_FREE(buffer);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+
+    /* pack all gids */
+    rc = sftp_buffer_add_ids(buffer, groups_map);
+    if (rc != SSH_OK) {
+        ssh_set_error_oom(sftp->session);
+        SSH_BUFFER_FREE(buffer);
+        sftp_set_error(sftp, SSH_FX_FAILURE);
+        return -1;
+    }
+
+    rc = sftp_packet_write(sftp, SSH_FXP_EXTENDED, buffer);
+    SSH_BUFFER_FREE(buffer);
+    if (rc < 0) {
+        return -1;
+    }
+
+    rc = sftp_recv_response_msg(sftp, id, true, &msg);
+    if (rc != SSH_OK) {
+        return -1;
+    }
+
+    if (msg->packet_type == SSH_FXP_EXTENDED_REPLY) {
+        rc = sftp_parse_names(msg->payload, users_map);
+        if (rc != SSH_OK) {
+            ssh_set_error(sftp->session,
+                          SSH_ERROR,
+                          "Failed to parse usernames");
+            sftp_set_error(sftp, SSH_FX_FAILURE);
+            sftp_message_free(msg);
+            return -1;
+        }
+
+        rc = sftp_parse_names(msg->payload, groups_map);
+        if (rc != SSH_OK) {
+            ssh_set_error(sftp->session,
+                          SSH_ERROR,
+                          "Failed to parse groupnames");
+            sftp_set_error(sftp, SSH_FX_FAILURE);
+            sftp_message_free(msg);
+            return -1;
+        }
+
+        sftp_message_free(msg);
+        return 0;
+    } else if (msg->packet_type == SSH_FXP_STATUS) {
+        status = parse_status_msg(msg);
+        sftp_message_free(msg);
+        if (status == NULL) {
+            return -1;
+        }
+
+        sftp_set_error(sftp, status->status);
+        ssh_set_error(sftp->session,
+                      SSH_REQUEST_DENIED,
+                      "SFTP server: %s",
+                      status->errormsg);
+        status_msg_free(status);
+    } else {
+        ssh_set_error(sftp->session,
+                      SSH_FATAL,
+                      "Received message %d when attempting to get user and "
+                      "group names by id",
+                      msg->packet_type);
+        sftp_message_free(msg);
+        sftp_set_error(sftp, SSH_FX_BAD_MESSAGE);
+    }
+
+    return -1;
+}
+
 #endif /* WITH_SFTP */
