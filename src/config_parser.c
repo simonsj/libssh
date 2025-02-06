@@ -82,6 +82,13 @@ char *ssh_config_get_token(char **str)
     if (*c == '\"') {
         for (r = ++c; *c; c++) {
             if (*c == '\"' || *c == '\n') {
+                if (*c == '\"' && r != c && *(c - 1) == '\\') {
+                    /* Escaped quote: Move the remaining one char left */
+                    int remaining_len = strlen(c);
+                    memmove(c - 1, c, remaining_len);
+                    c[remaining_len - 1] = '\0';
+                    continue;
+                }
                 *c = '\0';
                 c++;
                 break;
