@@ -517,6 +517,37 @@ Bad example:
             break;
     }
 
+## ABI Versioning and Symbol Management
+
+To maintain [ABI](https://en.wikipedia.org/wiki/Application_binary_interface) stability
+and ensure backward compatibility, libssh uses **symbol versioning** to track and manage
+exported functions and variables. This allows libssh to introduce new symbols or modify
+existing functions in an ABI-compatible way.
+
+When introducing a new symbol:
+
+1. Use the `LIBSSH_API` macro to mark the symbol as part of the public API.
+2. If you have [abimap](https://github.com/ansasaki/abimap) installed, the new symbols are
+automatically generated in the `src/libssh_dev.map` file in the **build** directory and used automatically for building the updated library. But, depending on the version of `abimap` under use, you may face linker errors like: `unable to find version dependency LIBSSH_4_9_0`. In this case, you need to manually replace the existing `src/libssh.map` file with the generated `libssh_dev.map` file to update the symbol versioning.
+3. If you do not have abimap installed, the modified/added symbols must manually be added to the
+`src/libssh.map` file. The symbols must be added in the following format (assuming that 4_10_0 is the latest released version):
+
+```
+LIBSSH_AFTER_4_10_0
+{
+    global:
+        new_function;
+        new_variable;
+} LIBSSH_4_10_0;
+```
+4. After following either of the above steps, the library can be successfully built and
+tested without any linker errors.
+
+5. When submitting the patch, make sure that any new symbols have been added to `libssh.map` as described in step 3, so that the new additions may not be excluded from the next release due to human error.
+
+Also, to maintain ABI compatibility, existing symbols must not be removed. Instead, they can
+be marked as deprecated using the `LIBSSH_DEPRECATED` macro. This allows the symbol to be
+removed in a future release without breaking the ABI.
 
 Have fun and happy libssh hacking!
 
