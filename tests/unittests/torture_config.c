@@ -2104,6 +2104,7 @@ static void torture_config_parser_get_cmd(void **state)
  *  * Strip leading whitespace
  *  * Return first token separated by whitespace or equal sign,
  *    respecting quotes!
+ *  * Correctly treat escaped quotes inside of quotes.
  */
 static void torture_config_parser_get_token(void **state)
 {
@@ -2275,6 +2276,28 @@ static void torture_config_parser_get_token(void **state)
     p = data;
     tok = ssh_config_get_token(&p);
     assert_string_equal(tok, "value");
+    assert_int_equal(*p, '\0');
+
+    /* Escaped quotes */
+    strncpy(data, " \"value with \\\"escaped\\\" quotes\"   \n", sizeof(data));
+    p = data;
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "value with \"escaped\" quotes");
+    assert_int_equal(*p, '\0');
+
+    strncpy(data, "\\\"value with \\\"escaped\\\" quotes\\\"\n", sizeof(data));
+    p = data;
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "\\\"value");
+    assert_int_equal(*p, 'w');
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "with");
+    assert_int_equal(*p, '\\');
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "\\\"escaped\\\"");
+    assert_int_equal(*p, 'q');
+    tok = ssh_config_get_token(&p);
+    assert_string_equal(tok, "quotes\\\"");
     assert_int_equal(*p, '\0');
 }
 
