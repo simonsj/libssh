@@ -317,9 +317,5 @@ endif (GSSAPI_FLAVOR_HEIMDAL)
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GSSAPI DEFAULT_MSG GSSAPI_LIBRARIES GSSAPI_INCLUDE_DIR)
 
-if (GSSAPI_INCLUDE_DIRS AND GSSAPI_LIBRARIES)
-    set(GSSAPI_FOUND TRUE)
-endif (GSSAPI_INCLUDE_DIRS AND GSSAPI_LIBRARIES)
-
-# show the GSSAPI_INCLUDE_DIRS and GSSAPI_LIBRARIES variables only in the advanced view
-mark_as_advanced(GSSAPI_INCLUDE_DIRS GSSAPI_LIBRARIES)
+# show the GSSAPI_INCLUDE_DIR and GSSAPI_LIBRARIES variables only in the advanced view
+mark_as_advanced(GSSAPI_INCLUDE_DIR GSSAPI_LIBRARIES)
