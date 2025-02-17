@@ -9,9 +9,11 @@
 #cmakedefine SOURCEDIR "${SOURCEDIR}"
 
 /* Global bind configuration file path */
+#cmakedefine USR_GLOBAL_BIND_CONFIG "${USR_GLOBAL_BIND_CONFIG}"
 #cmakedefine GLOBAL_BIND_CONFIG "${GLOBAL_BIND_CONFIG}"
 
 /* Global client configuration file path */
+#cmakedefine USR_GLOBAL_CLIENT_CONFIG "${USR_GLOBAL_CLIENT_CONFIG}"
 #cmakedefine GLOBAL_CLIENT_CONFIG "${GLOBAL_CLIENT_CONFIG}"
 
 /************************** HEADER FILES *************************/

@@ -27,6 +27,7 @@ option(WITH_INSECURE_NONE "Enable insecure none cipher and MAC algorithms (not s
 option(WITH_EXEC "Enable libssh to execute arbitrary commands from configuration files or options (match exec, proxy commands and OpenSSH-based proxy-jumps)." ON)
 option(FUZZ_TESTING "Build with fuzzer for the server and client (automatically enables none cipher!)" OFF)
 option(PICKY_DEVELOPER "Build with picky developer flags" OFF)
+option(WITH_HERMETIC_USR "Build with support for hermetic /usr/" OFF)
 
 if (WITH_ZLIB)
     set(WITH_LIBZ ON)
@@ -58,6 +59,11 @@ endif (NOT GLOBAL_BIND_CONFIG)
 if (NOT GLOBAL_CLIENT_CONFIG)
   set(GLOBAL_CLIENT_CONFIG "/etc/ssh/ssh_config")
 endif (NOT GLOBAL_CLIENT_CONFIG)
+
+if (WITH_HERMETIC_USR)
+  set(USR_GLOBAL_BIND_CONFIG "/usr${GLOBAL_BIND_CONFIG}")
+  set(USR_GLOBAL_CLIENT_CONFIG "/usr${GLOBAL_CLIENT_CONFIG}")
+endif (WITH_HERMETIC_USR)
 
 if (FUZZ_TESTING)
   set(WITH_INSECURE_NONE ON)

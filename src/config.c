@@ -1449,6 +1449,32 @@ ssh_config_parse_line(ssh_session session,
   return 0;
 }
 
+/* @brief Parse configuration from a file pointer
+ *
+ * @params[in] session   The ssh session
+ * @params[in] fp        A valid file pointer
+ * @params[in] global    Whether the config is global or not
+ *
+ * @returns    0 on successful parsing the configuration file, -1 on error
+ */
+int ssh_config_parse(ssh_session session, FILE *fp, bool global)
+{
+    char line[MAX_LINE_SIZE] = {0};
+    unsigned int count = 0;
+    int parsing, rv;
+
+    parsing = 1;
+    while (fgets(line, sizeof(line), fp)) {
+        count++;
+        rv = ssh_config_parse_line(session, line, count, &parsing, 0, global);
+        if (rv < 0) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
 /* @brief Parse configuration file and set the options to the given session
  *
  * @params[in] session   The ssh session
@@ -1458,36 +1484,32 @@ ssh_config_parse_line(ssh_session session,
  */
 int ssh_config_parse_file(ssh_session session, const char *filename)
 {
-    char line[MAX_LINE_SIZE] = {0};
-    unsigned int count = 0;
-    FILE *f;
-    int parsing, rv;
+    FILE *fp;
+    int rv;
     bool global = 0;
 
-    f = fopen(filename, "r");
-    if (f == NULL) {
+    fp = fopen(filename, "r");
+    if (fp == NULL) {
         return 0;
     }
 
     rv = strcmp(filename, GLOBAL_CLIENT_CONFIG);
+#ifdef USR_GLOBAL_CLIENT_CONFIG
+    if (rv != 0) {
+        rv = strcmp(filename, USR_GLOBAL_CLIENT_CONFIG);
+    }
+#endif
+
     if (rv == 0) {
         global = true;
     }
 
     SSH_LOG(SSH_LOG_PACKET, "Reading configuration data from %s", filename);
 
-    parsing = 1;
-    while (fgets(line, sizeof(line), f)) {
-        count++;
-        rv = ssh_config_parse_line(session, line, count, &parsing, 0, global);
-        if (rv < 0) {
-            fclose(f);
-            return -1;
-        }
-    }
+    rv = ssh_config_parse(session, fp, global);
 
-    fclose(f);
-    return 0;
+    fclose(fp);
+    return rv;
 }
 
 /* @brief Parse configuration string and set the options to the given session

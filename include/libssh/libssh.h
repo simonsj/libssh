@@ -49,9 +49,10 @@
   #endif
 #endif
 
-#include <stdarg.h>
-#include <stdint.h>
 #include <inttypes.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 #ifdef _MSC_VER
   typedef int mode_t;

@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #ifndef _WIN32
 #include <pwd.h>
 #else
@@ -1814,6 +1815,8 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
  *
  * @param  filename     The options file to use, if NULL the default
  *                      ~/.ssh/config and /etc/ssh/ssh_config will be used.
+ *                      If complied with support for hermetic-usr,
+ *                      /usr/etc/ssh/ssh_config will be used last.
  *
  * @return 0 on success, < 0 on error.
  *
@@ -1821,48 +1824,63 @@ int ssh_options_getopt(ssh_session session, int *argcptr, char **argv)
  */
 int ssh_options_parse_config(ssh_session session, const char *filename)
 {
-  char *expanded_filename;
-  int r;
+    char *expanded_filename;
+    int r;
+    FILE *fp;
 
-  if (session == NULL) {
-    return -1;
-  }
-  if (session->opts.host == NULL) {
-    ssh_set_error_invalid(session);
-    return -1;
-  }
+    if (session == NULL) {
+        return -1;
+    }
+    if (session->opts.host == NULL) {
+        ssh_set_error_invalid(session);
+        return -1;
+    }
 
-  if (session->opts.sshdir == NULL) {
-      r = ssh_options_set(session, SSH_OPTIONS_SSH_DIR, NULL);
-      if (r < 0) {
-          ssh_set_error_oom(session);
-          return -1;
-      }
-  }
+    if (session->opts.sshdir == NULL) {
+        r = ssh_options_set(session, SSH_OPTIONS_SSH_DIR, NULL);
+        if (r < 0) {
+            ssh_set_error_oom(session);
+            return -1;
+        }
+    }
 
-  /* set default filename */
-  if (filename == NULL) {
-    expanded_filename = ssh_path_expand_escape(session, "%d/config");
-  } else {
-    expanded_filename = ssh_path_expand_escape(session, filename);
-  }
-  if (expanded_filename == NULL) {
-    return -1;
-  }
+    /* set default filename */
+    if (filename == NULL) {
+        expanded_filename = ssh_path_expand_escape(session, "%d/config");
+    } else {
+        expanded_filename = ssh_path_expand_escape(session, filename);
+    }
+    if (expanded_filename == NULL) {
+        return -1;
+    }
 
-  r = ssh_config_parse_file(session, expanded_filename);
-  if (r < 0) {
-      goto out;
-  }
-  if (filename == NULL) {
-      r = ssh_config_parse_file(session, GLOBAL_CLIENT_CONFIG);
-  }
+    r = ssh_config_parse_file(session, expanded_filename);
+    if (r < 0) {
+        goto out;
+    }
+    if (filename == NULL) {
+        if ((fp = fopen(GLOBAL_CLIENT_CONFIG, "r")) != NULL) {
+            filename = GLOBAL_CLIENT_CONFIG;
+#ifdef USR_GLOBAL_CLIENT_CONFIG
+        } else if ((fp = fopen(USR_GLOBAL_CLIENT_CONFIG, "r")) != NULL) {
+            filename = USR_GLOBAL_CLIENT_CONFIG;
+#endif
+        }
 
-  /* Do not process the default configuration as part of connection again */
-  session->opts.config_processed = true;
+        if (fp) {
+            SSH_LOG(SSH_LOG_PACKET,
+                    "Reading configuration data from %s",
+                    filename);
+            r = ssh_config_parse(session, fp, true);
+            fclose(fp);
+        }
+    }
+
+    /* Do not process the default configuration as part of connection again */
+    session->opts.config_processed = true;
 out:
-  free(expanded_filename);
-  return r;
+    free(expanded_filename);
+    return r;
 }
 
 int ssh_options_apply(ssh_session session)
@@ -2706,7 +2724,13 @@ int ssh_bind_options_parse_config(ssh_bind sshbind, const char *filename)
     /* If the global default configuration hasn't been processed yet, process it
      * before the provided configuration. */
     if (!(sshbind->config_processed)) {
-        rc = ssh_bind_config_parse_file(sshbind, GLOBAL_BIND_CONFIG);
+        if (access(GLOBAL_BIND_CONFIG, F_OK) == 0) {
+            rc = ssh_bind_config_parse_file(sshbind, GLOBAL_BIND_CONFIG);
+#ifdef USR_GLOBAL_BIND_CONFIG
+        } else {
+            rc = ssh_bind_config_parse_file(sshbind, USR_GLOBAL_BIND_CONFIG);
+#endif
+        }
         if (rc != 0) {
             return rc;
         }
