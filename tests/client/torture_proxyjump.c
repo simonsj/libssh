@@ -9,24 +9,21 @@
 #include <errno.h>
 #include <fcntl.h>
 
-static int
-sshd_setup(void **state)
+static int sshd_setup(void **state)
 {
     torture_setup_sshd_server(state, false);
 
     return 0;
 }
 
-static int
-sshd_teardown(void **state)
+static int sshd_teardown(void **state)
 {
     torture_teardown_sshd_server(state);
 
     return 0;
 }
 
-static int
-session_setup(void **state)
+static int session_setup(void **state)
 {
     struct torture_state *s = *state;
     int verbosity = torture_libssh_verbosity();
@@ -62,8 +59,7 @@ session_setup(void **state)
     return 0;
 }
 
-static int
-session_teardown(void **state)
+static int session_teardown(void **state)
 {
     struct torture_state *s = *state;
 
@@ -73,8 +69,7 @@ session_teardown(void **state)
     return 0;
 }
 
-static void
-torture_proxyjump_single_jump(void **state)
+static void torture_proxyjump_single_jump(void **state)
 {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
@@ -103,8 +98,7 @@ torture_proxyjump_single_jump(void **state)
     assert_int_equal(rc, SSH_AUTH_SUCCESS);
 }
 
-static int
-before_connection(ssh_session jump_session, void *user)
+static int before_connection(ssh_session jump_session, void *user)
 {
     (void)jump_session;
     (void)user;
@@ -112,8 +106,7 @@ before_connection(ssh_session jump_session, void *user)
     return 0;
 }
 
-static int
-verify_knownhost(ssh_session jump_session, void *user)
+static int verify_knownhost(ssh_session jump_session, void *user)
 {
     (void)jump_session;
     (void)user;
@@ -121,16 +114,14 @@ verify_knownhost(ssh_session jump_session, void *user)
     return 0;
 }
 
-static int
-authenticate(ssh_session jump_session, void *user)
+static int authenticate(ssh_session jump_session, void *user)
 {
     (void)user;
 
     return ssh_userauth_publickey_auto(jump_session, NULL, NULL);
 }
 
-static void
-torture_proxyjump_multiple_jump(void **state)
+static void torture_proxyjump_multiple_jump(void **state)
 {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
@@ -173,8 +164,7 @@ torture_proxyjump_multiple_jump(void **state)
     assert_int_equal(rc, SSH_AUTH_SUCCESS);
 }
 
-static void
-torture_proxyjump_multiple_sshd_jump(void **state)
+static void torture_proxyjump_multiple_sshd_jump(void **state)
 {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
@@ -222,8 +212,7 @@ torture_proxyjump_multiple_sshd_jump(void **state)
     torture_teardown_sshd_server1(state);
 }
 
-static void
-torture_proxyjump_multiple_sshd_users_jump(void **state)
+static void torture_proxyjump_multiple_sshd_users_jump(void **state)
 {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
@@ -271,8 +260,7 @@ torture_proxyjump_multiple_sshd_users_jump(void **state)
     torture_teardown_sshd_server1(state);
 }
 
-static void
-torture_proxyjump_invalid_jump(void **state)
+static void torture_proxyjump_invalid_jump(void **state)
 {
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
@@ -294,8 +282,7 @@ torture_proxyjump_invalid_jump(void **state)
     assert_ssh_return_code_equal(session, rc, SSH_ERROR);
 }
 
-int
-torture_run_tests(void)
+int torture_run_tests(void)
 {
     int rc;
     struct CMUnitTest tests[] = {
