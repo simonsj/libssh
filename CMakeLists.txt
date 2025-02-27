@@ -41,6 +41,8 @@ macro_ensure_out_of_source_build("${PROJECT_NAME} requires an out of source buil
 # Copy library files to a lib sub-directory
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 
+set(LIBSSSH_PC_REQUIRES_PRIVATE "")
+
 # search for libraries
 if (WITH_ZLIB)
     find_package(ZLIB REQUIRED)
@@ -66,6 +68,7 @@ find_package(Threads)
 
 if (WITH_GSSAPI)
     find_package(GSSAPI)
+    list(APPEND LIBSSH_PC_REQUIRES_PRIVATE ${GSSAPI_PC_REQUIRES})
 endif (WITH_GSSAPI)
 
 if (WITH_NACL)
