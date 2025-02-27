@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #ifndef _WIN32
 #include <pwd.h>
 #else
@@ -2724,7 +2723,7 @@ int ssh_bind_options_parse_config(ssh_bind sshbind, const char *filename)
     /* If the global default configuration hasn't been processed yet, process it
      * before the provided configuration. */
     if (!(sshbind->config_processed)) {
-        if (access(GLOBAL_BIND_CONFIG, F_OK) == 0) {
+        if (ssh_file_readaccess_ok(GLOBAL_BIND_CONFIG)) {
             rc = ssh_bind_config_parse_file(sshbind, GLOBAL_BIND_CONFIG);
 #ifdef USR_GLOBAL_BIND_CONFIG
         } else {
