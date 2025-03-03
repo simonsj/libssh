@@ -6,6 +6,7 @@ Add a description of the new feature/bug fix. Reference any relevant bugs.
  * [ ] Test suite updated with functionality tests
  * [ ] Test suite updated with negative tests
  * [ ] Documentation updated
+ * [ ] The project pipelines timeout is [extended](https://docs.gitlab.com/ee/ci/pipelines/settings.html#set-a-limit-for-how-long-jobs-can-run) at least to 2 hours.
 
 ## Reviewer's checklist:
  * [ ] Any issues marked for closing are addressed
