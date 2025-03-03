@@ -117,6 +117,25 @@ libssh Developer's Certificate of Origin for each patch, or inside each
 patch. Just the sign-off message is all that is required once we've
 received the initial email.
 
+## Continuous Integration
+
+Contributing patches through Merge Request workflow on Gitlab allows us to run
+various checks on various configuration as part of Gitlab CI. Unfortunately,
+some pipelines are slower (as they involve building dependencies) so the default
+timeout of 1 hour needs to be extended at least to 2 hours. This can be done in
+project settings of your libssh fork:
+
+https://docs.gitlab.com/ee/ci/pipelines/settings.html#set-a-limit-for-how-long-jobs-can-run
+
+Otherwise you will encounter errors like these, usually on visualstudio builds:
+
+```
+ERROR: Job failed: execution took longer than 1h0m0s seconds
+The script exceeded the maximum execution time set for the job
+```
+
+Note, that the built dependencies are cached so after successful build in your
+namespace, the rebuilds should be much faster.
 
 # Coding conventions in the libssh tree
 
