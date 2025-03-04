@@ -1010,17 +1010,17 @@ ssh_config_parse_line(ssh_session session,
 
             case MATCH_UNKNOWN:
             default:
-                ssh_set_error(session, SSH_FATAL,
-                              "ERROR - Unknown argument '%s' for Match keyword", p);
-                SAFE_FREE(x);
-                return -1;
+                SSH_LOG(SSH_LOG_WARN,
+                        "Unknown argument '%s' for Match keyword. Not matching",
+                        p);
+                result = 0;
+                break;
             }
         } while (p != NULL && p[0] != '\0');
         if (args == 0) {
-            ssh_set_error(session, SSH_FATAL,
-                          "ERROR - Match keyword requires an argument");
-            SAFE_FREE(x);
-            return -1;
+            SSH_LOG(SSH_LOG_WARN,
+                    "ERROR - Match keyword requires an argument. Not matching");
+            result = 0;
         }
         *parsing = result;
         break;

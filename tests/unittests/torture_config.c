@@ -959,7 +959,9 @@ static void torture_config_match(void **state,
         string = config;
     }
     torture_reset_config(session);
-    _parse_config(session, file, string, SSH_ERROR);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "unmatched");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.host, "unmatched");
 
     /* Missing argument to unsupported option originalhost */
     config = "Match originalhost\n"
