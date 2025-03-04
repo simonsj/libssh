@@ -1017,6 +1017,36 @@ static void torture_config_match(void **state,
     }
     torture_reset_config(session);
     _parse_config(session, file, string, SSH_ERROR);
+
+    /* Unknown argument to Match keyword */
+    config = "Match tagged tag_name\n"
+             "\tHostName never-matched.com\n"
+             "Match all\n"
+             "\tHostName config-host.com\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "example.com");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.host, "config-host.com");
+
+    /* Missing argument to Match keyword */
+    config = "Match\n"
+             "\tHostName never-matched.com\n"
+             "Match all\n"
+             "\tHostName config-host.com\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "example.com");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.host, "config-host.com");
 }
 
 /**
