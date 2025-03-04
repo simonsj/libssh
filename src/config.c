@@ -894,9 +894,11 @@ ssh_config_parse_line(ssh_session session,
                 /* Here we match only one argument */
                 p = ssh_config_get_str_tok(&s, NULL);
                 if (p == NULL || p[0] == '\0') {
-                    ssh_set_error(session, SSH_FATAL,
-                                  "line %d: ERROR - Match user keyword "
-                                  "requires argument", count);
+                    ssh_set_error(session,
+                                  SSH_FATAL,
+                                  "line %d: ERROR - Match localuser keyword "
+                                  "requires argument",
+                                  count);
                     SAFE_FREE(x);
                     return -1;
                 }
