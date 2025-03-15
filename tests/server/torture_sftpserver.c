@@ -507,10 +507,10 @@ static void torture_server_test_sftp_function(void **state)
 static void torture_server_sftp_open_read_write(void **state)
 {
     struct test_server_st *tss = *state;
-    struct torture_state *s;
-    struct torture_sftp *tsftp;
-    sftp_session sftp;
-    ssh_session session;
+    struct torture_state *s = NULL;
+    struct torture_sftp *tsftp = NULL;
+    sftp_session sftp = NULL;
+    ssh_session session = NULL;
     sftp_attributes a = NULL;
     sftp_file new_file = NULL;
     char tmp_file[PATH_MAX] = {0};
@@ -565,6 +565,30 @@ static void torture_server_sftp_open_read_write(void **state)
     assert_int_equal(a->size, sizeof(data)); /* 10b written */
     assert_int_equal(a->type, SSH_FILEXFER_TYPE_REGULAR);
     sftp_attributes_free(a);
+
+    /*
+     * Now that file exists and contains some data, lets try O_TRUNC,
+     * mode is ignored
+     */
+    new_file = sftp_open(sftp, tmp_file, O_WRONLY | O_TRUNC, 0);
+    assert_non_null(new_file);
+
+    /* Verify that the existing data in the file has been truncated */
+    a = sftp_stat(sftp, tmp_file);
+    assert_non_null(a);
+    assert_int_equal(a->size, 0); /* No content due to truncation */
+    sftp_attributes_free(a);
+
+    /* Write should work ok */
+    write_len = sftp_write(new_file, data, sizeof(data));
+    assert_int_equal(write_len, sizeof(data));
+
+    /* Reading should fail */
+    read_len = sftp_read(new_file, read_data, sizeof(read_data));
+    assert_int_equal(read_len, SSH_ERROR);
+
+    rc = sftp_close(new_file);
+    assert_ssh_return_code(session, rc);
 
     /*
      * Now, lets try O_APPEND, mode is ignored
