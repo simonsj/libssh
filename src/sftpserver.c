@@ -882,17 +882,26 @@ process_open(sftp_client_message client_msg)
     SSH_LOG(SSH_LOG_PROTOCOL, "Processing open: filename %s, mode=0%o" PRIu32,
             filename, mode);
 
-    if (((msg_flag & (uint32_t)SSH_FXF_READ) == SSH_FXF_READ) &&
-        ((msg_flag & (uint32_t)SSH_FXF_WRITE) == SSH_FXF_WRITE)) {
-        file_flag = O_RDWR; // file must exist
-        if ((msg_flag & (uint32_t)SSH_FXF_CREAT) == SSH_FXF_CREAT)
-            file_flag |= O_CREAT;
-    } else if ((msg_flag & (uint32_t)SSH_FXF_WRITE) == SSH_FXF_WRITE) {
-        file_flag = O_WRONLY;
-        if ((msg_flag & (uint32_t)SSH_FXF_APPEND) == SSH_FXF_APPEND)
+    if ((msg_flag & (uint32_t)SSH_FXF_WRITE) == SSH_FXF_WRITE) {
+        if ((msg_flag & (uint32_t)SSH_FXF_READ) == SSH_FXF_READ) {
+            /* Both read and write */
+            file_flag = O_RDWR;
+        } else {
+            /* Only write */
+            file_flag = O_WRONLY;
+        }
+
+        if ((msg_flag & (uint32_t)SSH_FXF_APPEND) == SSH_FXF_APPEND) {
             file_flag |= O_APPEND;
-        if ((msg_flag & (uint32_t)SSH_FXF_CREAT) == SSH_FXF_CREAT)
+        }
+
+        if ((msg_flag & (uint32_t)SSH_FXF_CREAT) == SSH_FXF_CREAT) {
             file_flag |= O_CREAT;
+        }
+
+        if ((msg_flag & (uint32_t)SSH_FXF_TRUNC) == SSH_FXF_TRUNC) {
+            file_flag |= O_TRUNC;
+        }
     } else if ((msg_flag & (uint32_t)SSH_FXF_READ) == SSH_FXF_READ) {
         file_flag = O_RDONLY;
     } else {
