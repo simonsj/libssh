@@ -463,6 +463,49 @@ fail:
 }
 
 /**
+ * @internal
+ *
+ * @brief Build a public key authentication request.
+ *
+ * This helper function creates a SSH2_MSG_USERAUTH_REQUEST message for public
+ * key authentication.
+ *
+ * @param[in] session       The SSH session.
+ * @param[in] username      The username, may be NULL.
+ * @param[in] auth_type     Authentication type (0 for key offer, 1 for actual
+ * auth).
+ * @param[in] sig_type_c    The signature algorithm name.
+ * @param[in] pubkey_s      The public key string.
+ *
+ * @return  SSH_OK on success, SSH_ERROR if an error occurred.
+ */
+static int build_pubkey_auth_request(ssh_session session,
+                                     const char *username,
+                                     int has_signature,
+                                     const char *sig_type_c,
+                                     ssh_string pubkey_s)
+{
+    int rc;
+
+    /* request */
+    rc = ssh_buffer_pack(session->out_buffer,
+                         "bsssbsS",
+                         SSH2_MSG_USERAUTH_REQUEST,
+                         username ? username : session->opts.username,
+                         "ssh-connection",
+                         "publickey",
+                         has_signature, /* private key? */
+                         sig_type_c,    /* algo */
+                         pubkey_s       /* public key */
+    );
+    if (rc < 0) {
+        return SSH_ERROR;
+    }
+
+    return SSH_OK;
+}
+
+/**
  * @brief Try to authenticate with the given public key.
  *
  * To avoid unnecessary processing and user interaction, the following method
@@ -563,21 +606,10 @@ int ssh_userauth_try_publickey(ssh_session session,
     }
 
     SSH_LOG(SSH_LOG_TRACE, "Trying signature type %s", sig_type_c);
-    /* request */
-    rc = ssh_buffer_pack(session->out_buffer,
-                         "bsssbsS",
-                         SSH2_MSG_USERAUTH_REQUEST,
-                         username ? username : session->opts.username,
-                         "ssh-connection",
-                         "publickey",
-                         0,          /* private key ? */
-                         sig_type_c, /* algo */
-                         pubkey_s    /* public key */
-    );
+    rc = build_pubkey_auth_request(session, username, 0, sig_type_c, pubkey_s);
     if (rc < 0) {
         goto fail;
     }
-
     SSH_STRING_FREE(pubkey_s);
 
     session->auth.current_method = SSH_AUTH_METHOD_PUBLICKEY;
@@ -704,17 +736,7 @@ int ssh_userauth_publickey(ssh_session session,
     }
 
     SSH_LOG(SSH_LOG_TRACE, "Sending signature type %s", sig_type_c);
-    /* request */
-    rc = ssh_buffer_pack(session->out_buffer,
-                         "bsssbsS",
-                         SSH2_MSG_USERAUTH_REQUEST,
-                         username ? username : session->opts.username,
-                         "ssh-connection",
-                         "publickey",
-                         1,          /* private key */
-                         sig_type_c, /* algo */
-                         str         /* public key or cert */
-    );
+    rc = build_pubkey_auth_request(session, username, 1, sig_type_c, str);
     if (rc < 0) {
         goto fail;
     }
@@ -826,21 +848,11 @@ static int ssh_userauth_agent_publickey(ssh_session session,
         return SSH_AUTH_DENIED;
     }
 
-    /* request */
-    rc = ssh_buffer_pack(session->out_buffer,
-                         "bsssbsS",
-                         SSH2_MSG_USERAUTH_REQUEST,
-                         username ? username : session->opts.username,
-                         "ssh-connection",
-                         "publickey",
-                         1,          /* private key */
-                         sig_type_c, /* algo */
-                         pubkey_s    /* public key */
-    );
-    SSH_STRING_FREE(pubkey_s);
+    rc = build_pubkey_auth_request(session, username, 1, sig_type_c, pubkey_s);
     if (rc < 0) {
         goto fail;
     }
+    SSH_STRING_FREE(pubkey_s);
 
     /* sign the buffer with the private key */
     sig_blob = ssh_pki_do_sign_agent(session, session->out_buffer, pubkey);
