@@ -642,6 +642,7 @@ void ssh_message_free(ssh_message msg){
         SAFE_FREE(msg->auth_request.password);
       }
       ssh_key_free(msg->auth_request.pubkey);
+      ssh_key_free(msg->auth_request.server_pubkey);
       break;
     case SSH_REQUEST_CHANNEL_OPEN:
       SAFE_FREE(msg->channel_request_open.originator);
@@ -733,7 +734,8 @@ error:
 static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
                                                 ssh_message msg,
                                                 const char *service,
-                                                ssh_string algo)
+                                                ssh_string algo,
+                                                const char *method)
 {
     struct ssh_crypto_struct *crypto = NULL;
     ssh_buffer buffer;
@@ -763,8 +765,8 @@ static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
                          SSH2_MSG_USERAUTH_REQUEST, /* type */
                          msg->auth_request.username,
                          service,
-                         "publickey", /* method */
-                         1,           /* has to be signed (true) */
+                         method,
+                         1, /* has to be signed (true) */
                          ssh_string_get_char(algo), /* pubkey algorithm */
                          str);                      /* public key as a blob */
 
@@ -773,6 +775,25 @@ static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
         ssh_set_error_oom(session);
         SSH_BUFFER_FREE(buffer);
         return NULL;
+    }
+
+    /* Add server public key for hostbound extension */
+    if (strcmp(method, "publickey-hostbound-v00@openssh.com") == 0 &&
+        msg->auth_request.server_pubkey != NULL) {
+
+        rc = ssh_pki_export_pubkey_blob(msg->auth_request.server_pubkey, &str);
+        if (rc < 0) {
+            SSH_BUFFER_FREE(buffer);
+            return NULL;
+        }
+
+        rc = ssh_buffer_add_ssh_string(buffer, str);
+        SSH_STRING_FREE(str);
+        if (rc < 0) {
+            ssh_set_error_oom(session);
+            SSH_BUFFER_FREE(buffer);
+            return NULL;
+        }
     }
 
     return buffer;
@@ -870,17 +891,39 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request)
         goto end;
     }
 
-    if (strcmp(method, "publickey") == 0) {
+    if (strcmp(method, "publickey") == 0 ||
+        strcmp(method, "publickey-hostbound-v00@openssh.com") == 0) {
         ssh_string algo = NULL;
         ssh_string pubkey_blob = NULL;
+        ssh_string server_pubkey_blob = NULL;
         uint8_t has_sign;
 
         msg->auth_request.method = SSH_AUTH_METHOD_PUBLICKEY;
-        SAFE_FREE(method);
+
         rc = ssh_buffer_unpack(packet, "bSS", &has_sign, &algo, &pubkey_blob);
 
         if (rc != SSH_OK) {
             goto error;
+        }
+
+        cmp = strcmp(method, "publickey-hostbound-v00@openssh.com");
+        if (cmp == 0) {
+            server_pubkey_blob = ssh_buffer_get_ssh_string(packet);
+            if (server_pubkey_blob == NULL) {
+                SSH_STRING_FREE(pubkey_blob);
+                SSH_STRING_FREE(algo);
+                goto error;
+            }
+
+            rc = ssh_pki_import_pubkey_blob(server_pubkey_blob,
+                                            &msg->auth_request.server_pubkey);
+            SSH_STRING_FREE(server_pubkey_blob);
+
+            if (rc < 0) {
+                SSH_STRING_FREE(pubkey_blob);
+                SSH_STRING_FREE(algo);
+                goto error;
+            }
         }
 
         rc = ssh_pki_import_pubkey_blob(pubkey_blob, &msg->auth_request.pubkey);
@@ -914,7 +957,11 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request)
                 goto error;
             }
 
-            digest = ssh_msg_userauth_build_digest(session, msg, service, algo);
+            digest = ssh_msg_userauth_build_digest(session,
+                                                   msg,
+                                                   service,
+                                                   algo,
+                                                   method);
             SSH_STRING_FREE(algo);
             algo = NULL;
             if (digest == NULL) {
@@ -965,8 +1012,47 @@ SSH_PACKET_CALLBACK(ssh_packet_userauth_request)
 
             SSH_LOG(SSH_LOG_PACKET, "Valid signature received");
 
+            cmp = strcmp(method, "publickey-hostbound-v00@openssh.com");
+            if (cmp == 0) {
+                ssh_key server_key = NULL;
+
+                if (msg->auth_request.server_pubkey == NULL) {
+                    SSH_LOG(SSH_LOG_PACKET,
+                            "Server public key not provided by client");
+                    msg->auth_request.signature_state =
+                        SSH_PUBLICKEY_STATE_WRONG;
+                    goto error;
+                }
+
+                rc = ssh_get_server_publickey(session, &server_key);
+                if (rc != SSH_OK) {
+                    SSH_LOG(SSH_LOG_PACKET,
+                            "Failed to get server public key for hostbound "
+                            "verification");
+                    msg->auth_request.signature_state =
+                        SSH_PUBLICKEY_STATE_ERROR;
+                    ssh_key_free(server_key);
+                    goto error;
+                }
+
+                if (ssh_key_cmp(server_key,
+                                msg->auth_request.server_pubkey,
+                                SSH_KEY_CMP_PUBLIC) != 0) {
+                    SSH_LOG(SSH_LOG_PACKET,
+                            "Server public key doesn't match the one provided "
+                            "by client");
+                    msg->auth_request.signature_state =
+                        SSH_PUBLICKEY_STATE_WRONG;
+                    ssh_key_free(server_key);
+                    goto error;
+                }
+                ssh_key_free(server_key);
+            }
+
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_VALID;
         }
+
+        SAFE_FREE(method);
         SSH_STRING_FREE(algo);
         goto end;
     }

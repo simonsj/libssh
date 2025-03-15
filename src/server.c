@@ -229,11 +229,13 @@ static int ssh_server_send_extensions(ssh_session session) {
     }
 
     rc = ssh_buffer_pack(session->out_buffer,
-                         "bdss",
+                         "bdssss",
                          SSH2_MSG_EXT_INFO,
-                         1, /* nr. of extensions */
+                         2, /* nr. of extensions */
                          "server-sig-algs",
-                         hostkey_algorithms);
+                         hostkey_algorithms,
+                         "publickey-hostbound@openssh.com",
+                         "0");
     if (rc != SSH_OK) {
         goto error;
     }

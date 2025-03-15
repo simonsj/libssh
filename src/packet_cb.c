@@ -291,7 +291,6 @@ SSH_PACKET_CALLBACK(ssh_packet_ext_info)
     for (i = 0; i < nr_extensions; i++) {
         char *name = NULL;
         char *value = NULL;
-        int cmp;
 
         rc = ssh_buffer_unpack(packet, "ss", &name, &value);
         if (rc != SSH_OK) {
@@ -299,8 +298,7 @@ SSH_PACKET_CALLBACK(ssh_packet_ext_info)
             return SSH_PACKET_USED;
         }
 
-        cmp = strcmp(name, "server-sig-algs");
-        if (cmp == 0) {
+        if (strcmp(name, "server-sig-algs") == 0) {
             /* TODO check for NULL bytes */
             SSH_LOG(SSH_LOG_PACKET, "Extension: %s=<%s>", name, value);
 
@@ -313,6 +311,9 @@ SSH_PACKET_CALLBACK(ssh_packet_ext_info)
             if (rc == 1) {
                 session->extensions |= SSH_EXT_SIG_RSA_SHA256;
             }
+        } else if (strcmp(name, "publickey-hostbound@openssh.com") == 0) {
+            SSH_LOG(SSH_LOG_PACKET, "Extension: %s=<%s>", name, value);
+            session->extensions |= SSH_EXT_PUBLICKEY_HOSTBOUND;
         } else {
             SSH_LOG(SSH_LOG_PACKET, "Unknown extension: %s", name);
         }

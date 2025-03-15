@@ -465,10 +465,53 @@ fail:
 /**
  * @internal
  *
+ * @brief Adds the server's public key to the authentication request.
+ *
+ * This function is used internally when the hostbound public key authentication
+ * extension is enabled. It export the server's public key and adds it to the
+ * authentication buffer.
+ *
+ * @param[in]  session          The SSH session.
+ *
+ * @returns SSH_OK on success, SSH_ERROR if an error occurred.
+ */
+static int add_hostbound_pubkey(ssh_session session)
+{
+    int rc;
+    ssh_string server_pubkey_s = NULL;
+
+    if (session == NULL || session->current_crypto == NULL ||
+        session->current_crypto->server_pubkey == NULL) {
+        ssh_set_error(session,
+                      SSH_FATAL,
+                      "Invalid session or server public key");
+        return SSH_ERROR;
+    }
+
+    rc = ssh_pki_export_pubkey_blob(session->current_crypto->server_pubkey,
+                                    &server_pubkey_s);
+    if (rc < 0) {
+        goto error;
+    }
+
+    rc = ssh_buffer_add_ssh_string(session->out_buffer, server_pubkey_s);
+    if (rc < 0) {
+        goto error;
+    }
+
+error:
+    SSH_STRING_FREE(server_pubkey_s);
+    return rc;
+}
+
+/**
+ * @internal
+ *
  * @brief Build a public key authentication request.
  *
  * This helper function creates a SSH2_MSG_USERAUTH_REQUEST message for public
- * key authentication.
+ * key authentication and adds the server's public key if the hostbound
+ * extension is enabled.
  *
  * @param[in] session       The SSH session.
  * @param[in] username      The username, may be NULL.
@@ -486,6 +529,11 @@ static int build_pubkey_auth_request(ssh_session session,
                                      ssh_string pubkey_s)
 {
     int rc;
+    const char *auth_method = "publickey";
+
+    if (session->extensions & SSH_EXT_PUBLICKEY_HOSTBOUND) {
+        auth_method = "publickey-hostbound-v00@openssh.com";
+    }
 
     /* request */
     rc = ssh_buffer_pack(session->out_buffer,
@@ -493,13 +541,20 @@ static int build_pubkey_auth_request(ssh_session session,
                          SSH2_MSG_USERAUTH_REQUEST,
                          username ? username : session->opts.username,
                          "ssh-connection",
-                         "publickey",
+                         auth_method,
                          has_signature, /* private key? */
                          sig_type_c,    /* algo */
                          pubkey_s       /* public key */
     );
     if (rc < 0) {
         return SSH_ERROR;
+    }
+
+    if (session->extensions & SSH_EXT_PUBLICKEY_HOSTBOUND) {
+        rc = add_hostbound_pubkey(session);
+        if (rc < 0) {
+            return SSH_ERROR;
+        }
     }
 
     return SSH_OK;
