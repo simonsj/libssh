@@ -737,7 +737,7 @@ static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
 {
     struct ssh_crypto_struct *crypto = NULL;
     ssh_buffer buffer;
-    ssh_string str=NULL;
+    ssh_string str = NULL;
     int rc;
 
     crypto = ssh_packet_get_current_crypto(session, SSH_DIRECTION_IN);
@@ -758,14 +758,15 @@ static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
     rc = ssh_buffer_pack(buffer,
                          "dPbsssbsS",
                          crypto->session_id_len, /* session ID string */
-                         crypto->session_id_len, crypto->session_id,
+                         crypto->session_id_len,
+                         crypto->session_id,
                          SSH2_MSG_USERAUTH_REQUEST, /* type */
                          msg->auth_request.username,
                          service,
                          "publickey", /* method */
-                         1, /* has to be signed (true) */
+                         1,           /* has to be signed (true) */
                          ssh_string_get_char(algo), /* pubkey algorithm */
-                         str); /* public key as a blob */
+                         str);                      /* public key as a blob */
 
     SSH_STRING_FREE(str);
     if (rc != SSH_OK) {
@@ -783,263 +784,269 @@ static ssh_buffer ssh_msg_userauth_build_digest(ssh_session session,
  * @brief Handle a SSH_MSG_MSG_USERAUTH_REQUEST packet and queue a
  * SSH Message
  */
-SSH_PACKET_CALLBACK(ssh_packet_userauth_request){
-  ssh_message msg = NULL;
-  ssh_signature sig = NULL;
-  char *service = NULL;
-  char *method = NULL;
-  int cmp;
-  int rc;
+SSH_PACKET_CALLBACK(ssh_packet_userauth_request)
+{
+    ssh_message msg = NULL;
+    ssh_signature sig = NULL;
+    char *service = NULL;
+    char *method = NULL;
+    int cmp;
+    int rc;
 
-  (void)user;
-  (void)type;
+    (void)user;
+    (void)type;
 
-  msg = ssh_message_new(session);
-  if (msg == NULL) {
-    ssh_set_error_oom(session);
-    goto error;
-  }
-  msg->type = SSH_REQUEST_AUTH;
-  rc = ssh_buffer_unpack(packet,
-                         "sss",
-                         &msg->auth_request.username,
-                         &service,
-                         &method);
-
-  if (rc != SSH_OK) {
-      goto error;
-  }
-
-  SSH_LOG(SSH_LOG_PACKET,
-      "Auth request for service %s, method %s for user '%s'",
-      service, method,
-      msg->auth_request.username);
-
-  cmp = strcmp(service, "ssh-connection");
-  if (cmp != 0) {
-      SSH_LOG(SSH_LOG_TRACE,
-              "Invalid service request: %s",
-              service);
-      goto end;
-  }
-
-  if (strcmp(method, "none") == 0) {
-    msg->auth_request.method = SSH_AUTH_METHOD_NONE;
-    goto end;
-  }
-
-  if (strcmp(method, "password") == 0) {
-    uint8_t tmp;
-
-    msg->auth_request.method = SSH_AUTH_METHOD_PASSWORD;
-    rc = ssh_buffer_unpack(packet, "bs", &tmp, &msg->auth_request.password);
-    if (rc != SSH_OK) {
-      goto error;
-    }
-    goto end;
-  }
-
-  if (strcmp(method, "keyboard-interactive") == 0) {
-    ssh_string lang = NULL;
-    ssh_string submethods = NULL;
-
-    msg->auth_request.method = SSH_AUTH_METHOD_INTERACTIVE;
-    lang = ssh_buffer_get_ssh_string(packet);
-    if (lang == NULL) {
-      goto error;
-    }
-    /* from the RFC 4256
-     * 3.1.  Initial Exchange
-     * "The language tag is deprecated and SHOULD be the empty string."
-     */
-    SSH_STRING_FREE(lang);
-
-    submethods = ssh_buffer_get_ssh_string(packet);
-    if (submethods == NULL) {
-      goto error;
-    }
-    /* from the RFC 4256
-     * 3.1.  Initial Exchange
-     * "One possible implementation strategy of the submethods field on the
-     *  server is that, unless the user may use multiple different
-     *  submethods, the server ignores this field."
-     */
-    SSH_STRING_FREE(submethods);
-
-    goto end;
-  }
-
-  if (strcmp(method, "publickey") == 0) {
-    ssh_string algo = NULL;
-    ssh_string pubkey_blob = NULL;
-    uint8_t has_sign;
-
-    msg->auth_request.method = SSH_AUTH_METHOD_PUBLICKEY;
-    SAFE_FREE(method);
-    rc = ssh_buffer_unpack(packet, "bSS",
-            &has_sign,
-            &algo,
-            &pubkey_blob
-            );
-
-    if (rc != SSH_OK) {
-      goto error;
-    }
-
-    rc = ssh_pki_import_pubkey_blob(pubkey_blob, &msg->auth_request.pubkey);
-    SSH_STRING_FREE(pubkey_blob);
-    pubkey_blob = NULL;
-    if (rc < 0) {
-        SSH_STRING_FREE(algo);
-        algo = NULL;
+    msg = ssh_message_new(session);
+    if (msg == NULL) {
+        ssh_set_error_oom(session);
         goto error;
     }
-    msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_NONE;
-    msg->auth_request.sigtype = strdup(ssh_string_get_char(algo));
-    if (msg->auth_request.sigtype == NULL) {
-        msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_ERROR;
-        SSH_STRING_FREE(algo);
-        algo = NULL;
+    msg->type = SSH_REQUEST_AUTH;
+    rc = ssh_buffer_unpack(packet,
+                           "sss",
+                           &msg->auth_request.username,
+                           &service,
+                           &method);
+
+    if (rc != SSH_OK) {
         goto error;
     }
 
-    // has a valid signature ?
-    if(has_sign) {
-        ssh_string sig_blob = NULL;
-        ssh_buffer digest = NULL;
+    SSH_LOG(SSH_LOG_PACKET,
+            "Auth request for service %s, method %s for user '%s'",
+            service,
+            method,
+            msg->auth_request.username);
 
-        sig_blob = ssh_buffer_get_ssh_string(packet);
-        if(sig_blob == NULL) {
-            SSH_LOG(SSH_LOG_PACKET, "Invalid signature packet from peer");
+    cmp = strcmp(service, "ssh-connection");
+    if (cmp != 0) {
+        SSH_LOG(SSH_LOG_TRACE, "Invalid service request: %s", service);
+        goto end;
+    }
+
+    if (strcmp(method, "none") == 0) {
+        msg->auth_request.method = SSH_AUTH_METHOD_NONE;
+        goto end;
+    }
+
+    if (strcmp(method, "password") == 0) {
+        uint8_t tmp;
+
+        msg->auth_request.method = SSH_AUTH_METHOD_PASSWORD;
+        rc = ssh_buffer_unpack(packet, "bs", &tmp, &msg->auth_request.password);
+        if (rc != SSH_OK) {
+            goto error;
+        }
+        goto end;
+    }
+
+    if (strcmp(method, "keyboard-interactive") == 0) {
+        ssh_string lang = NULL;
+        ssh_string submethods = NULL;
+
+        msg->auth_request.method = SSH_AUTH_METHOD_INTERACTIVE;
+        lang = ssh_buffer_get_ssh_string(packet);
+        if (lang == NULL) {
+            goto error;
+        }
+        /* from the RFC 4256
+         * 3.1.  Initial Exchange
+         * "The language tag is deprecated and SHOULD be the empty string."
+         */
+        SSH_STRING_FREE(lang);
+
+        submethods = ssh_buffer_get_ssh_string(packet);
+        if (submethods == NULL) {
+            goto error;
+        }
+        /* from the RFC 4256
+         * 3.1.  Initial Exchange
+         * "One possible implementation strategy of the submethods field on the
+         *  server is that, unless the user may use multiple different
+         *  submethods, the server ignores this field."
+         */
+        SSH_STRING_FREE(submethods);
+
+        goto end;
+    }
+
+    if (strcmp(method, "publickey") == 0) {
+        ssh_string algo = NULL;
+        ssh_string pubkey_blob = NULL;
+        uint8_t has_sign;
+
+        msg->auth_request.method = SSH_AUTH_METHOD_PUBLICKEY;
+        SAFE_FREE(method);
+        rc = ssh_buffer_unpack(packet, "bSS", &has_sign, &algo, &pubkey_blob);
+
+        if (rc != SSH_OK) {
+            goto error;
+        }
+
+        rc = ssh_pki_import_pubkey_blob(pubkey_blob, &msg->auth_request.pubkey);
+        SSH_STRING_FREE(pubkey_blob);
+        pubkey_blob = NULL;
+        if (rc < 0) {
+            SSH_STRING_FREE(algo);
+            algo = NULL;
+            goto error;
+        }
+        msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_NONE;
+        msg->auth_request.sigtype = strdup(ssh_string_get_char(algo));
+        if (msg->auth_request.sigtype == NULL) {
             msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_ERROR;
             SSH_STRING_FREE(algo);
             algo = NULL;
             goto error;
         }
 
-        digest = ssh_msg_userauth_build_digest(session, msg, service, algo);
-        SSH_STRING_FREE(algo);
-        algo = NULL;
-        if (digest == NULL) {
-            SSH_STRING_FREE(sig_blob);
-            SSH_LOG(SSH_LOG_PACKET, "Failed to get digest");
-            msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
-            goto error;
-        }
+        // has a valid signature ?
+        if (has_sign) {
+            ssh_string sig_blob = NULL;
+            ssh_buffer digest = NULL;
 
-        rc = ssh_pki_import_signature_blob(sig_blob,
-                                           msg->auth_request.pubkey,
-                                           &sig);
-        if (rc == SSH_OK) {
-            /* Check if the signature from client matches server preferences */
-            if (session->opts.pubkey_accepted_types) {
-                cmp = match_group(session->opts.pubkey_accepted_types,
-                                  sig->type_c);
-                if (cmp != 1) {
-                    ssh_set_error(session,
+            sig_blob = ssh_buffer_get_ssh_string(packet);
+            if (sig_blob == NULL) {
+                SSH_LOG(SSH_LOG_PACKET, "Invalid signature packet from peer");
+                msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_ERROR;
+                SSH_STRING_FREE(algo);
+                algo = NULL;
+                goto error;
+            }
+
+            digest = ssh_msg_userauth_build_digest(session, msg, service, algo);
+            SSH_STRING_FREE(algo);
+            algo = NULL;
+            if (digest == NULL) {
+                SSH_STRING_FREE(sig_blob);
+                SSH_LOG(SSH_LOG_PACKET, "Failed to get digest");
+                msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
+                goto error;
+            }
+
+            rc = ssh_pki_import_signature_blob(sig_blob,
+                                               msg->auth_request.pubkey,
+                                               &sig);
+            if (rc == SSH_OK) {
+                /* Check if the signature from client matches server preferences
+                 */
+                if (session->opts.pubkey_accepted_types) {
+                    cmp = match_group(session->opts.pubkey_accepted_types,
+                                      sig->type_c);
+                    if (cmp != 1) {
+                        ssh_set_error(
+                            session,
                             SSH_FATAL,
                             "Public key from client (%s) doesn't match server "
                             "preference (%s)",
                             sig->type_c,
                             session->opts.pubkey_accepted_types);
-                    rc = SSH_ERROR;
+                        rc = SSH_ERROR;
+                    }
+                }
+
+                if (rc == SSH_OK) {
+                    rc = ssh_pki_signature_verify(session,
+                                                  sig,
+                                                  msg->auth_request.pubkey,
+                                                  ssh_buffer_get(digest),
+                                                  ssh_buffer_get_len(digest));
                 }
             }
-
-            if (rc == SSH_OK) {
-                rc = ssh_pki_signature_verify(session,
-                                              sig,
-                                              msg->auth_request.pubkey,
-                                              ssh_buffer_get(digest),
-                                              ssh_buffer_get_len(digest));
+            SSH_STRING_FREE(sig_blob);
+            SSH_BUFFER_FREE(digest);
+            ssh_signature_free(sig);
+            if (rc < 0) {
+                SSH_LOG(SSH_LOG_PACKET,
+                        "Received an invalid signature from peer");
+                msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
+                goto error;
             }
+
+            SSH_LOG(SSH_LOG_PACKET, "Valid signature received");
+
+            msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_VALID;
         }
-        SSH_STRING_FREE(sig_blob);
-        SSH_BUFFER_FREE(digest);
-        ssh_signature_free(sig);
-        if (rc < 0) {
-            SSH_LOG(
-                    SSH_LOG_PACKET,
-                    "Received an invalid signature from peer");
-            msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_WRONG;
+        SSH_STRING_FREE(algo);
+        goto end;
+    }
+#ifdef WITH_GSSAPI
+    if (strcmp(method, "gssapi-with-mic") == 0) {
+        uint32_t n_oid;
+        ssh_string *oids;
+        ssh_string oid;
+        char *hexa;
+        int i;
+        ssh_buffer_get_u32(packet, &n_oid);
+        n_oid = ntohl(n_oid);
+        if (n_oid > 100) {
+            ssh_set_error(
+                session,
+                SSH_FATAL,
+                "USERAUTH_REQUEST: gssapi-with-mic OID count too big (%d)",
+                n_oid);
             goto error;
         }
+        SSH_LOG(SSH_LOG_PACKET, "gssapi: %d OIDs", n_oid);
+        oids = calloc(n_oid, sizeof(ssh_string));
+        if (oids == NULL) {
+            ssh_set_error_oom(session);
+            goto error;
+        }
+        for (i = 0; i < (int)n_oid; ++i) {
+            oid = ssh_buffer_get_ssh_string(packet);
+            if (oid == NULL) {
+                for (i = i - 1; i >= 0; --i) {
+                    SAFE_FREE(oids[i]);
+                }
+                SAFE_FREE(oids);
+                ssh_set_error(session,
+                              SSH_LOG_PACKET,
+                              "USERAUTH_REQUEST: gssapi-with-mic missing OID");
+                goto error;
+            }
+            oids[i] = oid;
+            if (session->common.log_verbosity >= SSH_LOG_PACKET) {
+                hexa = ssh_get_hexa(ssh_string_data(oid), ssh_string_len(oid));
+                SSH_LOG(SSH_LOG_PACKET, "gssapi: OID %d: %s", i, hexa);
+                SAFE_FREE(hexa);
+            }
+        }
+        ssh_gssapi_handle_userauth(session,
+                                   msg->auth_request.username,
+                                   n_oid,
+                                   oids);
 
-        SSH_LOG(SSH_LOG_PACKET, "Valid signature received");
+        for (i = 0; i < (int)n_oid; ++i) {
+            SAFE_FREE(oids[i]);
+        }
+        SAFE_FREE(oids);
+        /* bypass the message queue thing */
+        SAFE_FREE(service);
+        SAFE_FREE(method);
+        SSH_MESSAGE_FREE(msg);
 
-        msg->auth_request.signature_state = SSH_PUBLICKEY_STATE_VALID;
+        return SSH_PACKET_USED;
     }
-    SSH_STRING_FREE(algo);
-    goto end;
-  }
-#ifdef WITH_GSSAPI
-  if (strcmp(method, "gssapi-with-mic") == 0) {
-     uint32_t n_oid;
-     ssh_string *oids;
-     ssh_string oid;
-     char *hexa;
-     int i;
-     ssh_buffer_get_u32(packet, &n_oid);
-     n_oid=ntohl(n_oid);
-     if(n_oid > 100){
-    	 ssh_set_error(session, SSH_FATAL, "USERAUTH_REQUEST: gssapi-with-mic OID count too big (%d)",n_oid);
-    	 goto error;
-     }
-     SSH_LOG(SSH_LOG_PACKET, "gssapi: %d OIDs", n_oid);
-     oids = calloc(n_oid, sizeof(ssh_string));
-     if (oids == NULL){
-    	 ssh_set_error_oom(session);
-    	 goto error;
-     }
-     for (i=0;i<(int) n_oid;++i){
-    	 oid=ssh_buffer_get_ssh_string(packet);
-    	 if(oid == NULL){
-    		 for(i=i-1;i>=0;--i){
-    			 SAFE_FREE(oids[i]);
-    		 }
-    		 SAFE_FREE(oids);
-    		 ssh_set_error(session, SSH_LOG_PACKET, "USERAUTH_REQUEST: gssapi-with-mic missing OID");
-    		 goto error;
-    	 }
-    	 oids[i] = oid;
-    	 if(session->common.log_verbosity >= SSH_LOG_PACKET){
-    		 hexa = ssh_get_hexa(ssh_string_data(oid), ssh_string_len(oid));
-    		 SSH_LOG(SSH_LOG_PACKET,"gssapi: OID %d: %s",i, hexa);
-    		 SAFE_FREE(hexa);
-    	 }
-     }
-     ssh_gssapi_handle_userauth(session, msg->auth_request.username, n_oid, oids);
-
-     for(i=0;i<(int)n_oid;++i){
-         SAFE_FREE(oids[i]);
-     }
-     SAFE_FREE(oids);
-     /* bypass the message queue thing */
-     SAFE_FREE(service);
-     SAFE_FREE(method);
-     SSH_MESSAGE_FREE(msg);
-
-     return SSH_PACKET_USED;
-  }
 #endif
 
-  msg->auth_request.method = SSH_AUTH_METHOD_UNKNOWN;
-  SAFE_FREE(method);
-  goto end;
+    msg->auth_request.method = SSH_AUTH_METHOD_UNKNOWN;
+    SAFE_FREE(method);
+    goto end;
 error:
-  SAFE_FREE(service);
-  SAFE_FREE(method);
+    SAFE_FREE(service);
+    SAFE_FREE(method);
 
-  SSH_MESSAGE_FREE(msg);
+    SSH_MESSAGE_FREE(msg);
 
-  return SSH_PACKET_USED;
+    return SSH_PACKET_USED;
 end:
-  SAFE_FREE(service);
-  SAFE_FREE(method);
+    SAFE_FREE(service);
+    SAFE_FREE(method);
 
-  ssh_message_queue(session,msg);
+    ssh_message_queue(session, msg);
 
-  return SSH_PACKET_USED;
+    return SSH_PACKET_USED;
 }
 
 #endif /* WITH_SERVER */
